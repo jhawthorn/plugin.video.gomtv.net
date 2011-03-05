@@ -43,6 +43,8 @@ def mainlist():
         ret = addDir("Most recent", "http://www.gomtv.net/videos/index.gom?page=1", 1, "")
         ret = addDir("Most viewed", "http://www.gomtv.net/videos/index.gom?page=1&order=2", 1, "")
         ret = addDir("Most replied", "http://www.gomtv.net/videos/index.gom?page=1&order=3&ltype=", 1, "")
+        ret = addDir("Live", "http://www.gomtv.net/", 3, "")
+        
         return ret
 
 def addLink(name, url, iconimage):
@@ -68,6 +70,11 @@ def addDir(name, url, mode, iconimage):
                                        listitem = li,
                                        isFolder = True)
 
+def live(url):
+    soup = BeautifulSoup(request(url))
+    text = " ".join(soup.find("span", "tooltip").findAll(text=True))
+    xbmcgui.Dialog().ok("No live broadcast", text)
+    
 def vod_list(url):
     soup = BeautifulSoup(request(url))
     thumb_links = soup.findAll("td", {"class": "listOff"})
@@ -161,6 +168,8 @@ elif mode == 1:
     vod_list(url)
 elif mode == 2:
     vod(url)
+elif mode == 3:
+    live(url)
 
 if end_dir:
     xbmcplugin.endOfDirectory(int(sys.argv[1]))
