@@ -77,7 +77,7 @@ def addDir(name, url, mode, iconimage):
 
 def live(url):
     soup = BeautifulSoup(request(url))
-    text = " ".join(soup.find("span", "tooltip").findAll(text=True))
+    text = "".join(soup.find("span", "tooltip").findAll(text=True))
     xbmcgui.Dialog().ok("No live broadcast", text)
     
 def vod_list(url):
