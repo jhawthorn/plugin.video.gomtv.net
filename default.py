@@ -35,16 +35,21 @@ def login(username, password):
                                                                  "cmd": "login",
                                                                  "rememberme": "1"})
     return ret == "1"
+
+def setting_defined(setting_id):
+    s = xbmcplugin.getSetting(handle, setting_id)
+    return s is not None and len(s) > 0
     
 def mainlist():
-    if not login(xbmcplugin.getSetting(handle, "username"), xbmcplugin.getSetting(handle, "password")):
+    if not setting_defined("username") or not setting_defined("password"):
+        xbmcgui.Dialog().ok("Missing configuration", "you need to configure a username and password")
+    elif not login(xbmcplugin.getSetting(handle, "username"), xbmcplugin.getSetting(handle, "password")):
         xbmcgui.Dialog().ok("Login failed", "login failed")
     else:
         ret = addDir("Most recent", "http://www.gomtv.net/videos/index.gom?page=1", 1, "")
         ret = addDir("Most viewed", "http://www.gomtv.net/videos/index.gom?page=1&order=2", 1, "")
         ret = addDir("Most replied", "http://www.gomtv.net/videos/index.gom?page=1&order=3&ltype=", 1, "")
         ret = addDir("Live", "http://www.gomtv.net/", 3, "")
-        
         return ret
 
 def addLink(name, url, iconimage):
