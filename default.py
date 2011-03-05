@@ -4,6 +4,8 @@ from BeautifulSoup import BeautifulSoup
 BASE_COOKIE_PATH = os.path.join(xbmc.translatePath( "special://profile/" ), "addon_data", os.path.basename(os.getcwd()), 'cookie.txt')
 handle = int(sys.argv[1])
 
+end_dir = False
+
 def get_cookie_jar():
     cookie_jar = cookielib.LWPCookieJar(BASE_COOKIE_PATH)
     if not os.path.exists(os.path.dirname(BASE_COOKIE_PATH)):
@@ -44,6 +46,8 @@ def mainlist():
         return ret
 
 def addLink(name, url, iconimage):
+    global end_dir
+    end_dir = True
     name = name.encode("utf-8")
     li = xbmcgui.ListItem(name, iconImage="DefaultVideo.png", thumbnailImage=iconimage)
     li.setInfo( type="Video", infoLabels={ "Title": name } )
@@ -53,6 +57,8 @@ def addLink(name, url, iconimage):
                                        listitem = li)
 
 def addDir(name, url, mode, iconimage):
+    global end_dir
+    end_dir = True
     name = name.encode("utf-8")
     url = "%s?url=%s&mode=%s&name=%s" % (sys.argv[0], urllib.quote_plus(url), str(mode), urllib.quote_plus(name))
     li = xbmcgui.ListItem(name, iconImage="DefaultFolder.png", thumbnailImage=iconimage)
@@ -156,4 +162,5 @@ elif mode == 1:
 elif mode == 2:
     vod(url)
 
-xbmcplugin.endOfDirectory(int(sys.argv[1]))
+if end_dir:
+    xbmcplugin.endOfDirectory(int(sys.argv[1]))
