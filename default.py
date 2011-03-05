@@ -67,9 +67,9 @@ def vod_list(url):
     thumb_links = soup.findAll("td", {"class": "listOff"})
     for thumb_link in thumb_links:
         href = thumb_link.find("a", "thumb_link")["href"]
-        #iconimage =
+        iconimage = thumb_link.find("img", "vodthumb")["src"]
         name = thumb_link.find("a", "thumb_link")["title"]
-        addDir(name, "http://www.gomtv.net%s" % href.replace("/./", "/"), 2, "")
+        addDir(name, "http://www.gomtv.net%s" % href.replace("/./", "/"), 2, iconimage)
     page = int(re.search("page=([0-9]+)", url).group(1))
     addDir("Next", url.replace("page=%d" % page, "page=%d" % (page + 1)), 1, "")
 
