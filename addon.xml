@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="plugin.video.gomtv.net"
-       name="gomtv.net"
+       name="GOMtv.net"
        version="0.0.1"
        provider-name="Henrik Olsson &lt;henrik@fixme.se&gt;">
   <requires>
@@ -13,8 +13,8 @@
     <provides>video</provides>
   </extension>
   <extension point="xbmc.addon.metadata">
-    <summary lang="en">gomtv.net</summary>
-    <description lang="en">gomtv.net video plugin</description>
+    <summary lang="en">GOMtv.net</summary>
+    <description lang="en">GOMtv.net video plugin</description>
     <platform>all</platform>
   </extension>
 </addon>
