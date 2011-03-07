@@ -177,4 +177,4 @@ elif mode == 3:
     live(url)
 
 if end_dir:
-    xbmcplugin.endOfDirectory(int(sys.argv[1]))
+    xbmcplugin.endOfDirectory(handle)
