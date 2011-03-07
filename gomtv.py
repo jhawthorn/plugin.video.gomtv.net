@@ -8,7 +8,7 @@ class NoBroadcastException(Exception):
     def __init__(self, msg):
         self.msg = msg
 
-class GOMTV(object):
+class GOMtv(object):
     VODLIST_ORDER_MOST_RECENT = 1
     VODLIST_ORDER_MOST_VIEWED = 2
     VODLIST_ORDER_MOST_COMMENTED = 3

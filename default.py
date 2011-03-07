@@ -1,6 +1,6 @@
 import urllib, urllib2, re, xbmcplugin, xbmcgui, os, xbmc, cookielib, socket
 from BeautifulSoup import BeautifulSoup
-from gomtv import GOMTV, NoBroadcastException
+from gomtv import GOMtv, NoBroadcastException
 
 BASE_COOKIE_PATH = os.path.join(xbmc.translatePath( "special://profile/" ), "addon_data", os.path.basename(os.getcwd()), 'cookie.txt')
 handle = int(sys.argv[1])
@@ -10,11 +10,11 @@ def setting_defined(setting_id):
     return s is not None and len(s) > 0
 
 def login():
-    g = GOMTV(BASE_COOKIE_PATH)
+    g = GOMtv(BASE_COOKIE_PATH)
     if not setting_defined("username") or not setting_defined("password"):
         xbmcgui.Dialog().ok("Missing configuration", "you need to configure a username and password")
         return False
-    elif not g.login(xbmcplugin.getSetting(handle, "username"), xbmcplugin.getSetting(handle, "password")) == GOMTV.LOGIN_SUCCESS:
+    elif not g.login(xbmcplugin.getSetting(handle, "username"), xbmcplugin.getSetting(handle, "password")) == GOMtv.LOGIN_SUCCESS:
         xbmcgui.Dialog().ok("Login failed", "login failed")
         return False    
     return True
@@ -42,18 +42,18 @@ def addDir(name, iconimage, func, **params):
                                        url = url,
                                        listitem = li,
                                        isFolder = True)
-def mainlist():
+def list_main():
     if login():
-        addDir("Most recent", "", show_vod_list, page=1, order=1)
-        addDir("Most viewed", "", show_vod_list, page=1, order=2)
-        addDir("Most replied", "", show_vod_list, page=1, order=3)
+        addDir("Most recent", "", list_vods, page=1, order=1)
+        addDir("Most viewed", "", list_vods, page=1, order=2)
+        addDir("Most replied", "", list_vods, page=1, order=3)
         addDir("Live", "", show_live)
         return True
     else:
         return False
 
 def show_live():
-    g = GOMTV(BASE_COOKIE_PATH)
+    g = GOMtv(BASE_COOKIE_PATH)
     try:
         ls = g.live()
         for (k,v) in ls.items():
@@ -62,19 +62,19 @@ def show_live():
     except NoBroadcastException, nbe:
         xbmcgui.Dialog().ok("No live broadcast", nbe.msg)
     
-def show_vod_list(order, page):
-    g = GOMTV(BASE_COOKIE_PATH)
+def list_vods(order, page):
+    g = GOMtv(BASE_COOKIE_PATH)
     result = g.get_vod_list(int(order), int(page))
     for vod in result["vods"]:
-        addDir(vod["title"], vod["preview"], show_vod, url=vod["url"])
+        addDir(vod["title"], vod["preview"], list_vod_set, url=vod["url"])
     if result["has_previous"]:
-        addDir("Previous", "", show_vod_list, order=order, page=int(page)-1)
+        addDir("Previous", "", list_vods, order=order, page=int(page)-1)
     if result["has_next"]:
-        addDir("Next", "", show_vod_list, order=order, page=int(page)+1)
+        addDir("Next", "", list_vods, order=order, page=int(page)+1)
     return True
 
-def show_vod(url):
-    g = GOMTV(BASE_COOKIE_PATH)
+def list_vod_set(url):
+    g = GOMtv(BASE_COOKIE_PATH)
     sets = g.get_vod_set(url)
     for s in sets:
         addLink(s["title"], s["url"], "")
@@ -86,7 +86,7 @@ def get_params():
 
 params = get_params()
 if not "method" in params:
-    params["method"] = "mainlist"
+    params["method"] = "list_main"
 
 func = locals()[params["method"]]
 del params["method"]
