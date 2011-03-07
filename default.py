@@ -1,60 +1,25 @@
 import urllib, urllib2, re, xbmcplugin, xbmcgui, os, xbmc, cookielib, socket
 from BeautifulSoup import BeautifulSoup
+from gomtv import GOMTV, NoBroadcastException
 
 BASE_COOKIE_PATH = os.path.join(xbmc.translatePath( "special://profile/" ), "addon_data", os.path.basename(os.getcwd()), 'cookie.txt')
 handle = int(sys.argv[1])
 
-end_dir = False
-
-def get_cookie_jar():
-    cookie_jar = cookielib.LWPCookieJar(BASE_COOKIE_PATH)
-    if not os.path.exists(os.path.dirname(BASE_COOKIE_PATH)):
-        os.makedirs(os.path.dirname(BASE_COOKIE_PATH))
-    if (os.path.isfile(BASE_COOKIE_PATH)):
-        cookie_jar.load(BASE_COOKIE_PATH)
-    return cookie_jar
-
-def request(url, data=None):
-    cookie_jar = get_cookie_jar()
-    urllib2.install_opener(urllib2.build_opener(urllib2.HTTPCookieProcessor(cookie_jar)))
-    
-    if data is not None:
-        data = urllib.urlencode(data)
-        req = urllib2.Request(url, data)
-    else:
-        req = urllib2.Request(url)
-    response = urllib2.urlopen(req)
-    ret = response.read()
-    response.close()
-    cookie_jar.save()
-    return ret
-
-def login(username, password):
-    ret = request("http://www.gomtv.net/user/loginProcess.gom", {"mb_username": username,
-                                                                 "mb_password": password,
-                                                                 "cmd": "login",
-                                                                 "rememberme": "1"})
-    return ret == "1"
-
 def setting_defined(setting_id):
     s = xbmcplugin.getSetting(handle, setting_id)
     return s is not None and len(s) > 0
-    
-def mainlist():
+
+def login():
+    g = GOMTV(BASE_COOKIE_PATH)
     if not setting_defined("username") or not setting_defined("password"):
         xbmcgui.Dialog().ok("Missing configuration", "you need to configure a username and password")
-    elif not login(xbmcplugin.getSetting(handle, "username"), xbmcplugin.getSetting(handle, "password")):
+        return False
+    elif not g.login(xbmcplugin.getSetting(handle, "username"), xbmcplugin.getSetting(handle, "password")) == GOMTV.LOGIN_SUCCESS:
         xbmcgui.Dialog().ok("Login failed", "login failed")
-    else:
-        ret = addDir("Most recent", "http://www.gomtv.net/videos/index.gom?page=1", 1, "")
-        ret = addDir("Most viewed", "http://www.gomtv.net/videos/index.gom?page=1&order=2", 1, "")
-        ret = addDir("Most replied", "http://www.gomtv.net/videos/index.gom?page=1&order=3&ltype=", 1, "")
-        ret = addDir("Live", "http://www.gomtv.net/", 3, "")
-        return ret
+        return False    
+    return True
 
 def addLink(name, url, iconimage):
-    global end_dir
-    end_dir = True
     name = name.encode("utf-8")
     li = xbmcgui.ListItem(name, iconImage="DefaultVideo.png", thumbnailImage=iconimage)
     li.setInfo( type="Video", infoLabels={ "Title": name } )
@@ -63,118 +28,74 @@ def addLink(name, url, iconimage):
                                        url = url,
                                        listitem = li)
 
-def addDir(name, url, mode, iconimage):
-    global end_dir
-    end_dir = True
+def addDir(name, iconimage, func, **params):
     name = name.encode("utf-8")
-    url = "%s?url=%s&mode=%s&name=%s" % (sys.argv[0], urllib.quote_plus(url), str(mode), urllib.quote_plus(name))
-    li = xbmcgui.ListItem(name, iconImage="DefaultFolder.png", thumbnailImage=iconimage)
+    url = "%s?method=%s" % (sys.argv[0], func.__name__)
+    if len(params.items()) > 0:
+        for (k,v) in params.items():
+            url = url + "&%s=%s" % (urllib.quote_plus(k), urllib.quote_plus(str(v)))
+    li = xbmcgui.ListItem(name,
+                          iconImage="DefaultFolder.png",
+                          thumbnailImage=iconimage)
     li.setInfo( type="Video", infoLabels={ "Title": name } )
     return xbmcplugin.addDirectoryItem(handle = handle,
                                        url = url,
                                        listitem = li,
                                        isFolder = True)
+def mainlist():
+    if login():
+        addDir("Most recent", "", show_vod_list, page=1, order=1)
+        addDir("Most viewed", "", show_vod_list, page=1, order=2)
+        addDir("Most replied", "", show_vod_list, page=1, order=3)
+        addDir("Live", "", show_live)
+        return True
+    else:
+        return False
 
-def live(url):
-    soup = BeautifulSoup(request(url))
-    text = "".join(soup.find("span", "tooltip").findAll(text=True))
-    xbmcgui.Dialog().ok("No live broadcast", text)
+def show_live():
+    g = GOMTV(BASE_COOKIE_PATH)
+    try:
+        ls = g.live()
+        for (k,v) in ls.items():
+            addLink(k, v, "")
+        return True
+    except NoBroadcastException, nbe:
+        xbmcgui.Dialog().ok("No live broadcast", nbe.msg)
     
-def vod_list(url):
-    soup = BeautifulSoup(request(url))
-    thumb_links = soup.findAll("td", {"class": "listOff"})
-    for thumb_link in thumb_links:
-        href = thumb_link.find("a", "thumb_link")["href"]
-        iconimage = thumb_link.find("img", "vodthumb")["src"]
-        name = thumb_link.find("a", "thumb_link")["title"]
-        addDir(name, "http://www.gomtv.net%s" % href.replace("/./", "/"), 2, iconimage)
-    page = int(re.search("page=([0-9]+)", url).group(1))
-    addDir("Next", url.replace("page=%d" % page, "page=%d" % (page + 1)), 1, "")
+def show_vod_list(order, page):
+    g = GOMTV(BASE_COOKIE_PATH)
+    result = g.get_vod_list(int(order), int(page))
+    for vod in result["vods"]:
+        addDir(vod["title"], vod["preview"], show_vod, url=vod["url"])
+    if result["has_previous"]:
+        addDir("Previous", "", show_vod_list, order=order, page=int(page)-1)
+    if result["has_next"]:
+        addDir("Next", "", show_vod_list, order=order, page=int(page)+1)
+    return True
 
-def get_stream_key(server_ip, uno, nodeid, local_ip):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((server_ip, 63800))
-    payload = "Login,0,%s,%s,%s\n" % (uno, nodeid, local_ip)
-    xbmc.log("payload: %s" % payload, xbmc.LOGDEBUG)
-    s.send(payload)
-    data = s.recv(1024)
-    s.close()
-    return data[data.rfind(",")+1:-1]
-    
-def vod(url):
-    r = request(url)
-    leagueid = re.search('"leagueid"\s*:\s*"(.*)",', r).group(1)
-    soup = BeautifulSoup(r)
-    match_sets = soup.find("div", "matchset_set").findAll("a")
-    i = 1
-    for match_set in match_sets:
-        vjoinid = match_set["onclick"]
-        vjoinid = vjoinid[vjoinid.find("vjoinid':")+len("vjoinid':"):-1]
-        vjoinid = vjoinid[0:vjoinid.find("}")]
-        url = "http://www.gomtv.net/gox/gox.gom?&target=vod&leagueid=%s&vjoinid=%s&strLevel=HQ&" % (leagueid, vjoinid)
-        r = request(url)
-        if "ErrorMessage" in r:
-            return
-        
-        url = re.search("href='(.*)'", r).group(1)
-        url = url.replace("&amp;", "&")
-        
-        uno = re.search("uno=([0-9]+)", url).group(1)
-        nodeid = re.search("nodeid=([0-9]+)", url).group(1)
-        ip = re.search("ip=([0-9.]+)", url).group(1)
-        remote_ip = re.search("//([0-9.]+)/", url).group(1)
-        key = get_stream_key(remote_ip, uno, nodeid, ip)
-        
-        url = url + "&key=" + key
-
-        name = "Set %d" % i
-        i = i + 1
-        addLink(name, url, "")
-
+def show_vod(url):
+    g = GOMTV(BASE_COOKIE_PATH)
+    sets = g.get_vod_set(url)
+    for s in sets:
+        addLink(s["title"], s["url"], "")
+    return True
 
 def get_params():
-    param=[]
-    paramstring=sys.argv[2]
-    xbmc.log( "get_params() %s" % paramstring, xbmc.LOGDEBUG )
-    if len(paramstring)>=2:
-        params=sys.argv[2]
-        cleanedparams=params.replace('?','')
-        if (params[len(params)-1]=='/'):
-            params=params[0:len(params)-2]
-        pairsofparams=cleanedparams.split('&')
-        param={}
-        for i in range(len(pairsofparams)):
-            splitparams={}
-            splitparams=pairsofparams[i].split('=')
-            if (len(splitparams))==2:
-                param[splitparams[0]]=splitparams[1]
-                        
-    return param
-        
+    params = re.findall("\??&?([^=]+)=([^&]+)", sys.argv[2])
+    return dict((key, urllib.unquote_plus(value)) for key, value in params)
+
 params = get_params()
-url = None
-name = None
-mode = None
+if not "method" in params:
+    params["method"] = "mainlist"
 
-try: url=urllib.unquote_plus(params["url"])
-except: pass
-try: name=urllib.unquote_plus(params["name"])
-except: pass
-try: mode=int(params["mode"])
-except: pass
-
-xbmc.log( "Mode: "+str(mode), xbmc.LOGINFO)
-xbmc.log( "URL : "+str(url), xbmc.LOGINFO)
-xbmc.log( "Name: "+str(name), xbmc.LOGINFO)
-
-if mode == None or url == None or len(url) < 1:
-    mainlist()
-elif mode == 1:
-    vod_list(url)
-elif mode == 2:
-    vod(url)
-elif mode == 3:
-    live(url)
-
-if end_dir:
-    xbmcplugin.endOfDirectory(handle)
+func = locals()[params["method"]]
+del params["method"]
+try:
+    if func.__call__(**params):
+        xbmcplugin.endOfDirectory(handle)
+except NotLoggedInException:
+    if login():
+        if func.__call__(**params):
+            xbmcplugin.endOfDirectory(handle)
+        
+    
