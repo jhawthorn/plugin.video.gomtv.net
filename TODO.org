@@ -3,7 +3,8 @@
 * DONE add setting for HQ/SQ
   CLOSED: [2011-03-08 Tue 21:55]
 * TODO add facebook/twitter login
-* TODO check if password can be hidden
+* DONE check if password can be hidden
+  CLOSED: [2011-03-08 Tue 21:57]
 * TODO play all item in set list
 * TODO fix livestream
 
