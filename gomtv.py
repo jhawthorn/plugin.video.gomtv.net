@@ -16,6 +16,7 @@ class GOMtv(object):
     VODLIST_ORDER_MOST_COMMENTED = 3
 
     LOGIN_SUCCESS = 1
+    LOGIN_BAD_USERNAME_OR_PASSWORD = 2
     LOGIN_BAD_EMAIL = 3
     LOGIN_BAD_PASSWORD = 4
     LOGIN_SNS_ACCOUNT = 5
@@ -78,6 +79,7 @@ class GOMtv(object):
                                                                                "cmd": "login",
                                                                                "rememberme": "1"})
             return int(ret)
+        
         elif auth_type == self.AUTH_TWITTER:
             data = self._request("http://www.gomtv.net/twitter/redirect.gom?burl=/index.gom")
             location = re.search("document.location.replace\(\"(.*)\"\)", data).group(1)
@@ -96,10 +98,35 @@ class GOMtv(object):
                                         "session[password]": password,
                                         "submit": "Sign in",
                                         "authenticity_token": auth_token})
+
+            refresh = re.search('<meta http-equiv="refresh" content="0;url=(.*)">', data)
+            if refresh is None:
+                return self.LOGIN_BAD_USERNAME_OR_PASSWORD
+            else:
+                location = refresh.group(1)
+                data = self._request(location)
+                return self.LOGIN_SUCCESS
             
-            location = re.search('<meta http-equiv="refresh" content="0;url=(.*)">', data).group(1)
-            data = self._request(location)
-            print data
+        elif auth_type == self.AUTH_FACEBOOK:
+            data = self._request("http://www.gomtv.net/facebook/index.gom?burl=/index.gom")
+            soup = BeautifulSoup(data)
+            # already logged in
+            if data.startswith("<script>"):
+                return self.LOGIN_SUCCESS
+
+            url = soup.find("form")["action"]
+            payload = {}
+            for field in soup.findAll("input"):
+                if not field["name"] == "charset_test":
+                    payload[field["name"]] = field["value"]
+            payload["email"] = username
+            payload["pass"] = password
+
+            data = self._request(url, payload)
+            if re.search("<title>Logga in", data) is None:
+                return self.LOGIN_SUCCESS
+            else:
+                return self.LOGIN_BAD_USERNAME_OR_PASSWORD
 
     def get_league_list(self):
         soup = BeautifulSoup(self._request("http://www.gomtv.net/view/channelDetails.gom?gameid=0"))
