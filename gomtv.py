@@ -1,6 +1,7 @@
 import urllib, urllib2, re, cookielib, socket, os, tempfile
 from BeautifulSoup import BeautifulSoup
-
+import simplejson as json
+ 
 class NotLoggedInException(Exception):
     pass
 
@@ -27,14 +28,12 @@ class GOMtv(object):
         if (os.path.isfile(cookie_path)):
             self.cookie_jar.load(cookie_path)
 
-    def _request(self, url, data=None):
+    def _request(self, url, data=None, headers={}):
         urllib2.install_opener(urllib2.build_opener(urllib2.HTTPCookieProcessor(self.cookie_jar)))
         
         if data is not None:
             data = urllib.urlencode(data)
-            req = urllib2.Request(url, data)
-        else:
-            req = urllib2.Request(url)
+        req = urllib2.Request(url, data, headers)
         response = urllib2.urlopen(req)
         ret = response.read()
         response.close()
@@ -87,10 +86,22 @@ class GOMtv(object):
         match_sets = matchset_div.findAll("a")
         i = 1
         result = []
+        previous_metadata = None
         for match_set in match_sets:
-            vjoinid = match_set["onclick"]
-            vjoinid = vjoinid[vjoinid.find("vjoinid':")+len("vjoinid':"):-1]
+            onclick = match_set["onclick"]
+            vjoinid = onclick[onclick.find("vjoinid':")+len("vjoinid':"):-1]
             vjoinid = vjoinid[0:vjoinid.find("}")]
+            setid = onclick[onclick.find("setsInfo('")+len("setsInfo('"):-1]
+            setid = setid[0:setid.find("'")]
+            r = self._request("http://www.gomtv.net/process/ajaxCall.gom?src=getSetInfo&setid=%s" % setid,
+                              headers={"Accept": "application/json, text/javascript, */*",
+                                       "Referer": vod_url})
+            metadata = json.loads(r)
+
+            # use previous metadata if this is a set without players, i.e. game not played
+            if metadata["player0"] == "0" and previous_metadata is not None:
+                metadata = previous_metadata
+                
             url = "http://www.gomtv.net/gox/gox.gom?&target=vod&leagueid=%s&vjoinid=%s&strLevel=%s&" % (leagueid, vjoinid, quality)
             r = self._request(url)
             if "ErrorMessage" in r:
@@ -107,10 +118,11 @@ class GOMtv(object):
             
             url = url + "&key=" + key
         
-            name = "Set %d" % i
+            name = "Set %d - %s vs %s" % (i, metadata["race00"], metadata["race11"])
             i = i + 1
             result.append({"url": url,
                            "title": name})
+            previous_metadata = metadata
         return result
             
         
