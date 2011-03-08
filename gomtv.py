@@ -1,7 +1,8 @@
 import urllib, urllib2, re, cookielib, socket, os, tempfile
 from BeautifulSoup import BeautifulSoup
 import simplejson as json
- 
+from time import time
+
 class NotLoggedInException(Exception):
     pass
 
@@ -26,6 +27,10 @@ class GOMtv(object):
 
     # ugly hack
     CURRENT_LEAGUE = "videos"
+
+    AUTH_GOMTV = 1
+    AUTH_TWITTER = 2
+    AUTH_FACEBOOK = 3
     
     def __init__(self, cookie_path=None):
         if cookie_path is None:
@@ -56,13 +61,45 @@ class GOMtv(object):
         data = s.recv(1024)
         s.close()
         return data[data.rfind(",")+1:-1]
-    
-    def login(self, username, password):
-        ret = self._request("http://www.gomtv.net/user/loginProcess.gom", {"mb_username": username,
-                                                                           "mb_password": password,
-                                                                           "cmd": "login",
-                                                                           "rememberme": "1"})
-        return int(ret)
+
+    def set_cookie(self, name, value):
+        exp = time() + 24 * 60 * 60
+        cookie = cookielib.Cookie(version=0, name=name, value=value, port=None, port_specified=False,
+                                  domain='.gomtv.net', domain_specified=True, domain_initial_dot=True,
+                                  path='/', path_specified=True, secure=False, expires=exp,
+                                  discard=False, comment=None, comment_url=None, rest={}, rfc2109=False)
+        self.cookie_jar.set_cookie(cookie)
+        
+
+    def login(self, username, password, auth_type=AUTH_GOMTV):
+        if auth_type == self.AUTH_GOMTV:
+            ret = self._request("http://www.gomtv.net/user/loginProcess.gom", {"mb_username": username,
+                                                                               "mb_password": password,
+                                                                               "cmd": "login",
+                                                                               "rememberme": "1"})
+            return int(ret)
+        elif auth_type == self.AUTH_TWITTER:
+            data = self._request("http://www.gomtv.net/twitter/redirect.gom?burl=/index.gom")
+            location = re.search("document.location.replace\(\"(.*)\"\)", data).group(1)
+            oauth_token = re.search("setCookie\('oauth_token', \"(.*)\"", data).group(1)
+            oauth_token_secret = re.search("setCookie\('oauth_token_secret', \"(.*)\"", data).group(1)
+            self.set_cookie("oauth_token", oauth_token)
+            self.set_cookie("oauth_token_secret", oauth_token_secret)
+
+            data = self._request(location)
+            soup = BeautifulSoup(data)
+            oauth_token = soup.find("input", {"id": "oauth_token"})["value"]
+            auth_token = soup.find("input", {"name": "authenticity_token"})["value"]
+            url = soup.find("form")["action"]
+            data = self._request(url, {"oauth_token": oauth_token,
+                                        "session[username_or_email]": username,
+                                        "session[password]": password,
+                                        "submit": "Sign in",
+                                        "authenticity_token": auth_token})
+            
+            location = re.search('<meta http-equiv="refresh" content="0;url=(.*)">', data).group(1)
+            data = self._request(location)
+            print data
 
     def get_league_list(self):
         soup = BeautifulSoup(self._request("http://www.gomtv.net/view/channelDetails.gom?gameid=0"))
