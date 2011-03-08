@@ -2,4 +2,4 @@ syntax: glob
 main.py
 env/*
 *.pyc
-
+*.pyo
