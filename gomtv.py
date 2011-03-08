@@ -134,7 +134,11 @@ class GOMtv(object):
         # single set..
         if matchset_div is None:
             vjoinid = re.search('"vjoinid"\s*:\s*"(.*)",', r).group(1)
-            return [{"url": self._get_set_info(None, leagueid, vjoinid, quality)[0],
+            url = self._get_set_info(None, leagueid, vjoinid, quality)[0]
+            # probably not logged in
+            if url is None:
+                return []
+            return [{"url": url,
                      "title": "Set 1"}]
         
         match_sets = matchset_div.findAll("a")
