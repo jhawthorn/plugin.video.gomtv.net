@@ -1,6 +1,7 @@
 * DONE add race info to the set names
   CLOSED: [2011-03-08 Tue 22:24]
-* TODO add support for browsing by season/league
+* DONE add support for browsing by season/league
+  CLOSED: [2011-03-08 Tue 22:53]
 * DONE add setting for HQ/SQ
   CLOSED: [2011-03-08 Tue 21:55]
 * TODO add facebook/twitter login

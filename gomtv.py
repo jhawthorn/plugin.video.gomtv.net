@@ -18,6 +18,14 @@ class GOMtv(object):
     LOGIN_BAD_EMAIL = 3
     LOGIN_BAD_PASSWORD = 4
     LOGIN_SNS_ACCOUNT = 5
+
+    VODLIST_TYPE_ALL = 0
+    VODLIST_TYPE_CODE_S = 32
+    VODLIST_TYPE_CODE_A = 16
+    VODLIST_TYPE_UP_DOWN = 64
+
+    # ugly hack
+    CURRENT_LEAGUE = "videos"
     
     def __init__(self, cookie_path=None):
         if cookie_path is None:
@@ -56,8 +64,19 @@ class GOMtv(object):
                                                                            "rememberme": "1"})
         return int(ret)
 
-    def get_vod_list(self, order=1, page=1):
-        url = "http://www.gomtv.net/videos/index.gom?page=%d&order=%d" % (page, order)
+    def get_league_list(self):
+        soup = BeautifulSoup(self._request("http://www.gomtv.net/view/channelDetails.gom?gameid=0"))
+        leagues = soup.find("dl", "league_list").findAll("dl", "league_list")
+        result = []
+        for league in leagues:
+            result.append({"id": league.find("a")["href"].replace("/", ""),
+                           "logo": league.find("img")["src"],
+                           "name": league.find("strong").find(text=True)})
+        return result
+            
+        
+    def get_vod_list(self, order=1, page=1, league=CURRENT_LEAGUE, type=VODLIST_TYPE_ALL):
+        url = "http://www.gomtv.net/%s/vod/index.gom?page=%d&order=%d&ltype=%d" % (league, page, order, type)
         soup = BeautifulSoup(self._request(url))
         thumb_links = soup.findAll("td", {"class": "listOff"})
         last = int(re.search("page=([0-9]+)", soup.find("a", text="Last >>").parent["href"]).group(1))

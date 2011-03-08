@@ -43,12 +43,15 @@ def addDir(name, iconimage, func, **params):
                                        url = url,
                                        listitem = li,
                                        isFolder = True)
-def list_main():
+def list_main(league=GOMtv.CURRENT_LEAGUE):
     if login():
-        addDir("Most recent", "", list_vods, page=1, order=1)
-        addDir("Most viewed", "", list_vods, page=1, order=2)
-        addDir("Most replied", "", list_vods, page=1, order=3)
-        addDir("Live", "", show_live)
+        addDir("Most recent", "", list_vods, page=1, order=GOMtv.VODLIST_ORDER_MOST_RECENT, league=league)
+        addDir("Most viewed", "", list_vods, page=1, order=GOMtv.VODLIST_ORDER_MOST_VIEWED, league=league)
+        addDir("Most commented", "", list_vods, page=1, order=GOMtv.VODLIST_ORDER_MOST_COMMENTED, league=league)
+        # Kind of ugly..
+        if league == GOMtv.CURRENT_LEAGUE:
+            addDir("Live", "", show_live)
+            addDir("Leagues", "", list_leagues)
         return True
     else:
         return False
@@ -62,16 +65,23 @@ def show_live():
         return True
     except NoBroadcastException, nbe:
         xbmcgui.Dialog().ok("No live broadcast", nbe.msg)
-    
-def list_vods(order, page):
+
+def list_leagues():
     g = GOMtv(BASE_COOKIE_PATH)
-    result = g.get_vod_list(int(order), int(page))
+    leagues = g.get_league_list()
+    for league in leagues:
+        addDir(league["name"], league["logo"], list_main, league=league["id"])
+    return True
+    
+def list_vods(order, page, league=GOMtv.CURRENT_LEAGUE):
+    g = GOMtv(BASE_COOKIE_PATH)
+    result = g.get_vod_list(int(order), int(page), league)
     for vod in result["vods"]:
         addDir(vod["title"], vod["preview"], list_vod_set, url=vod["url"])
     if result["has_previous"]:
-        addDir("Previous", "", list_vods, order=order, page=int(page)-1)
+        addDir("Previous", "", list_vods, order=order, page=int(page)-1, league=league)
     if result["has_next"]:
-        addDir("Next", "", list_vods, order=order, page=int(page)+1)
+        addDir("Next", "", list_vods, order=order, page=int(page)+1, league=league)
     return True
 
 def list_vod_set(url):
