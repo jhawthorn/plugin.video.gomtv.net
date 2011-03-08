@@ -1,6 +1,7 @@
 * TODO add race info to the set names
 * TODO add support for browsing by season/league
-* TODO add setting for HQ/SQ
+* DONE add setting for HQ/SQ
+  CLOSED: [2011-03-08 Tue 21:55]
 * TODO add facebook/twitter login
 * TODO check if password can be hidden
 * TODO play all item in set list

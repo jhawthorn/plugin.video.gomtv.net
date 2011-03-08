@@ -20,6 +20,7 @@ def login():
     return True
 
 def addLink(name, url, iconimage):
+    xbmc.log("adding link: %s -> %s" % (name, url), xbmc.LOGDEBUG)
     name = name.encode("utf-8")
     li = xbmcgui.ListItem(name, iconImage="DefaultVideo.png", thumbnailImage=iconimage)
     li.setInfo( type="Video", infoLabels={ "Title": name } )
@@ -74,8 +75,12 @@ def list_vods(order, page):
     return True
 
 def list_vod_set(url):
+    if xbmcplugin.getSetting(handle, "use_hq") == "true":
+        quality = "HQ"
+    else:
+        quality = "SQ"
     g = GOMtv(BASE_COOKIE_PATH)
-    sets = g.get_vod_set(url)
+    sets = g.get_vod_set(url, quality)
     for s in sets:
         addLink(s["title"], s["url"], "")
     return True

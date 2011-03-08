@@ -2,4 +2,5 @@
 <strings>
   <string id="30000">Username</string>
   <string id="30001">Password</string>
+  <string id="30002">Use HQ</string>
 </strings>

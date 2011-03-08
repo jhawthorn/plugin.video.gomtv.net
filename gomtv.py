@@ -77,7 +77,7 @@ class GOMtv(object):
                            "title": thumb_link.find("a", "thumb_link")["title"]})
         return result
     
-    def get_vod_set(self, vod_url):
+    def get_vod_set(self, vod_url, quality="HQ"):
         r = self._request(vod_url)
         leagueid = re.search('"leagueid"\s*:\s*"(.*)",', r).group(1)
         soup = BeautifulSoup(r)
@@ -91,11 +91,11 @@ class GOMtv(object):
             vjoinid = match_set["onclick"]
             vjoinid = vjoinid[vjoinid.find("vjoinid':")+len("vjoinid':"):-1]
             vjoinid = vjoinid[0:vjoinid.find("}")]
-            url = "http://www.gomtv.net/gox/gox.gom?&target=vod&leagueid=%s&vjoinid=%s&strLevel=HQ&" % (leagueid, vjoinid)
+            url = "http://www.gomtv.net/gox/gox.gom?&target=vod&leagueid=%s&vjoinid=%s&strLevel=%s&" % (leagueid, vjoinid, quality)
             r = self._request(url)
             if "ErrorMessage" in r:
                 return result
-        
+
             url = re.search("href='(.*)'", r).group(1)
             url = url.replace("&amp;", "&")
         
