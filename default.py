@@ -10,6 +10,7 @@ def setting_defined(setting_id):
     return s is not None and len(s) > 0
 
 def login():
+    xbmc.log("account_type %s" % xbmcplugin.getSetting(handle, "account_type"), xbmc.LOGDEBUG)
     g = GOMtv(BASE_COOKIE_PATH)
     if not setting_defined("username") or not setting_defined("password"):
         xbmcgui.Dialog().ok("Missing configuration", "you need to configure a username and password")

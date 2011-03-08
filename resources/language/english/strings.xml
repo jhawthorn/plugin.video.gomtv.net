@@ -3,4 +3,8 @@
   <string id="30000">Username</string>
   <string id="30001">Password</string>
   <string id="30002">Use HQ</string>
+  <string id="30003">Account Type</string>
+  <string id="30004">GOMTV.net</string>
+  <string id="30005">Twitter</string>
+  <string id="30006">Facebook</string>
 </strings>
