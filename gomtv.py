@@ -94,14 +94,49 @@ class GOMtv(object):
                            "preview": thumb_link.find("img", "vodthumb")["src"],
                            "title": thumb_link.find("a", "thumb_link")["title"]})
         return result
-    
+
+    def _get_set_info(self, setid, leagueid, vjoinid, quality, referer=None):
+        url = "http://www.gomtv.net/gox/gox.gom?&target=vod&leagueid=%s&vjoinid=%s&strLevel=%s&" % (leagueid, vjoinid, quality)
+        r = self._request(url)
+        if "ErrorMessage" in r:
+            return None, None
+        
+        url = re.search("href='(.*)'", r).group(1)
+        url = url.replace("&amp;", "&")
+        
+        uno = re.search("uno=([0-9]+)", url).group(1)
+        nodeid = re.search("nodeid=([0-9]+)", url).group(1)
+        ip = re.search("ip=([0-9.]+)", url).group(1)
+        remote_ip = re.search("//([0-9.]+)/", url).group(1)
+        key = self._get_stream_key(remote_ip, uno, nodeid, ip)
+            
+        url = url + "&key=" + key
+
+        if setid is not None:
+            r = self._request("http://www.gomtv.net/process/ajaxCall.gom?src=getSetInfo&setid=%s" % setid,
+                              headers={"Accept": "application/json, text/javascript, */*",
+                                       "Referer": referer})
+            metadata = json.loads(r)
+        else:
+            metadata = None
+            
+        return url, metadata
+            
     def get_vod_set(self, vod_url, quality="HQ"):
         r = self._request(vod_url)
         leagueid = re.search('"leagueid"\s*:\s*"(.*)",', r).group(1)
         soup = BeautifulSoup(r)
         matchset_div = soup.find("div", "matchset_set")
+
+        if soup.find("a", {"id": "set_hq"}) is None:
+            quality = "SQ"
+            
+        # single set..
         if matchset_div is None:
-            raise NotLoggedInException()
+            vjoinid = re.search('"vjoinid"\s*:\s*"(.*)",', r).group(1)
+            return [{"url": self._get_set_info(None, leagueid, vjoinid, quality)[0],
+                     "title": "Set 1"}]
+        
         match_sets = matchset_div.findAll("a")
         i = 1
         result = []
@@ -112,35 +147,22 @@ class GOMtv(object):
             vjoinid = vjoinid[0:vjoinid.find("}")]
             setid = onclick[onclick.find("setsInfo('")+len("setsInfo('"):-1]
             setid = setid[0:setid.find("'")]
-            r = self._request("http://www.gomtv.net/process/ajaxCall.gom?src=getSetInfo&setid=%s" % setid,
-                              headers={"Accept": "application/json, text/javascript, */*",
-                                       "Referer": vod_url})
-            metadata = json.loads(r)
 
+            url, metadata = self._get_set_info(setid, leagueid, vjoinid, quality, vod_url)
+
+            # probably not logged in
+            if url is None:
+                return result
+            
             # use previous metadata if this is a set without players, i.e. game not played
             if metadata["player0"] == "0" and previous_metadata is not None:
                 metadata = previous_metadata
-                
-            url = "http://www.gomtv.net/gox/gox.gom?&target=vod&leagueid=%s&vjoinid=%s&strLevel=%s&" % (leagueid, vjoinid, quality)
-            r = self._request(url)
-            if "ErrorMessage" in r:
-                return result
-
-            url = re.search("href='(.*)'", r).group(1)
-            url = url.replace("&amp;", "&")
-        
-            uno = re.search("uno=([0-9]+)", url).group(1)
-            nodeid = re.search("nodeid=([0-9]+)", url).group(1)
-            ip = re.search("ip=([0-9.]+)", url).group(1)
-            remote_ip = re.search("//([0-9.]+)/", url).group(1)
-            key = self._get_stream_key(remote_ip, uno, nodeid, ip)
             
-            url = url + "&key=" + key
-        
             name = "Set %d - %s vs %s" % (i, metadata["race00"], metadata["race11"])
             i = i + 1
             result.append({"url": url,
                            "title": name})
+            
             previous_metadata = metadata
         return result
             
