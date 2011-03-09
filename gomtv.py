@@ -256,8 +256,10 @@ class GOMtv(object):
                 return {"sq": sq,
                         "hq": hq}
             else:
+                print url
                 url = re.search("LiveAddr=(.*)", url).group(1)
-                url = url[0:url.find("&amp;")]
+                url = url.replace("&amp;", "&")
+                url = url.replace("&quot;", "%22")
                 return {"sq": urllib2.unquote(url)}
                 
     
