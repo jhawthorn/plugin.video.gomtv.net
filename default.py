@@ -10,12 +10,16 @@ def setting_defined(setting_id):
     return s is not None and len(s) > 0
 
 def login():
-    xbmc.log("account_type %s" % xbmcplugin.getSetting(handle, "account_type"), xbmc.LOGDEBUG)
     g = GOMtv(BASE_COOKIE_PATH)
+    auth_type = GOMtv.AUTH_GOMTV
+    if xbmcplugin.getSetting(handle, "account_type") == "Twitter":
+        auth_type = GOMtv.AUTH_TWITTER
+    elif xbmcplugin.getSetting(handle, "account_type") == "Facebook":
+        auth_type = GOMtv.AUTH_FACEBOOK
     if not setting_defined("username") or not setting_defined("password"):
         xbmcgui.Dialog().ok("Missing configuration", "you need to configure a username and password")
         return False
-    elif not g.login(xbmcplugin.getSetting(handle, "username"), xbmcplugin.getSetting(handle, "password")) == GOMtv.LOGIN_SUCCESS:
+    elif not g.login(xbmcplugin.getSetting(handle, "username"), xbmcplugin.getSetting(handle, "password"), auth_type) == GOMtv.LOGIN_SUCCESS:
         xbmcgui.Dialog().ok("Login failed", "login failed")
         return False    
     return True

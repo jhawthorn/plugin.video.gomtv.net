@@ -68,7 +68,7 @@ class GOMtv(object):
         cookie = cookielib.Cookie(version=0, name=name, value=value, port=None, port_specified=False,
                                   domain='.gomtv.net', domain_specified=True, domain_initial_dot=True,
                                   path='/', path_specified=True, secure=False, expires=exp,
-                                  discard=False, comment=None, comment_url=None, rest={}, rfc2109=False)
+                                  discard=False, comment=None, comment_url=None, rest={})
         self.cookie_jar.set_cookie(cookie)
         
 
