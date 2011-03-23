@@ -201,9 +201,9 @@ class GOMtv(object):
             url = self._get_set_info(None, leagueid, vjoinid, quality)[0]
             # probably not logged in
             if url is None:
-                return []
-            return [{"url": url,
-                     "title": "Set 1"}]
+                return
+            yield {"url": url,
+                   "title": "Set 1"}
         
         match_sets = matchset_div.findAll("a")
         i = 1
@@ -220,7 +220,7 @@ class GOMtv(object):
 
             # probably not logged in
             if url is None:
-                return result
+                return
             
             # use previous metadata if this is a set without players, i.e. game not played
             if metadata["player0"] == "0" and previous_metadata is not None:
@@ -228,11 +228,10 @@ class GOMtv(object):
             
             name = "Set %d - %s vs %s" % (i, metadata["race00"], metadata["race11"])
             i = i + 1
-            result.append({"url": url,
-                           "title": name})
+            yield {"url": url,
+                   "title": name}
             
             previous_metadata = metadata
-        return result
             
         
     def live(self):

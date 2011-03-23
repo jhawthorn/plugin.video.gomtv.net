@@ -95,8 +95,7 @@ def list_vod_set(url):
     else:
         quality = "SQ"
     g = GOMtv(BASE_COOKIE_PATH)
-    sets = g.get_vod_set(url, quality)
-    for s in sets:
+    for s in g.get_vod_set(url, quality):
         addLink(s["title"], s["url"], "")
     return True
 
