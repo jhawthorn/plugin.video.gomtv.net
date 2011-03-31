@@ -95,7 +95,8 @@ def list_vod_set(url):
     else:
         quality = "SQ"
     g = GOMtv(BASE_COOKIE_PATH)
-    for s in g.get_vod_set(url, quality):
+    retrieve_metadata = xbmcplugin.getSetting(handle, "show_races") == "true"
+    for s in g.get_vod_set(url, quality, retrieve_metadata):
         addLink(s["title"], s["url"], "")
     return True
 

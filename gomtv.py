@@ -185,7 +185,7 @@ class GOMtv(object):
             
         return url, metadata
             
-    def get_vod_set(self, vod_url, quality="HQ"):
+    def get_vod_set(self, vod_url, quality="HQ", retrieve_metadata=True):
         r = self._request(vod_url)
         leagueid = re.search('"leagueid"\s*:\s*"(.*)",', r).group(1)
         soup = BeautifulSoup(r)
@@ -211,11 +211,11 @@ class GOMtv(object):
         for match_set in match_sets:
             onclick = match_set["onclick"]
             vjoinid = re.search("vjoinid'?:(.*)}",onclick).group(1)
-            if onclick.find("setsInfo(") > -1:
-                setid = onclick[onclick.find("setsInfo('")+len("setsInfo('"):-1]
-                setid = setid[0:setid.find("'")]
-            else:
-                setid = None
+            setid = None
+            if retrieve_metadata:
+                if onclick.find("setsInfo(") > -1:
+                    setid = onclick[onclick.find("setsInfo('")+len("setsInfo('"):-1]
+                    setid = setid[0:setid.find("'")]
             url, metadata = self._get_set_info(setid, leagueid, vjoinid, quality, vod_url)
             # probably not logged in
             if url is None:
