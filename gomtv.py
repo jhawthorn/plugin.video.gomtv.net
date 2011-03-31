@@ -138,7 +138,6 @@ class GOMtv(object):
                            "name": league.find("strong").find(text=True)})
         return result
             
-        
     def get_vod_list(self, order=1, page=1, league=CURRENT_LEAGUE, type=VODLIST_TYPE_ALL):
         url = "http://www.gomtv.net/%s/vod/index.gom?page=%d&order=%d&ltype=%d" % (league, page, order, type)
         soup = BeautifulSoup(self._request(url))
@@ -191,7 +190,6 @@ class GOMtv(object):
         leagueid = re.search('"leagueid"\s*:\s*"(.*)",', r).group(1)
         soup = BeautifulSoup(r)
         matchset_div = soup.find("div", "matchset_set")
-
         if soup.find("a", {"id": "set_hq"}) is None:
             quality = "SQ"
             
@@ -204,6 +202,7 @@ class GOMtv(object):
                 return
             yield {"url": url,
                    "title": "Set 1"}
+            return
         
         match_sets = matchset_div.findAll("a")
         i = 1
@@ -211,17 +210,23 @@ class GOMtv(object):
         previous_metadata = None
         for match_set in match_sets:
             onclick = match_set["onclick"]
-            vjoinid = onclick[onclick.find("vjoinid':")+len("vjoinid':"):-1]
-            vjoinid = vjoinid[0:vjoinid.find("}")]
-            setid = onclick[onclick.find("setsInfo('")+len("setsInfo('"):-1]
-            setid = setid[0:setid.find("'")]
-
+            vjoinid = re.search("vjoinid'?:(.*)}",onclick).group(1)
+            if onclick.find("setsInfo(") > -1:
+                setid = onclick[onclick.find("setsInfo('")+len("setsInfo('"):-1]
+                setid = setid[0:setid.find("'")]
+            else:
+                setid = None
             url, metadata = self._get_set_info(setid, leagueid, vjoinid, quality, vod_url)
-
             # probably not logged in
             if url is None:
                 return
             
+            if metadata == None:
+                name = "Set %d" % (i)
+                i = i + 1
+                yield {"url": url,
+                       "title": name}
+            else:
             # use previous metadata if this is a set without players, i.e. game not played
             if metadata["player0"] == "0" and previous_metadata is not None:
                 metadata = previous_metadata
