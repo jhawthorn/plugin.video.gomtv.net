@@ -227,16 +227,17 @@ class GOMtv(object):
                 yield {"url": url,
                        "title": name}
             else:
-            # use previous metadata if this is a set without players, i.e. game not played
-            if metadata["player0"] == "0" and previous_metadata is not None:
-                metadata = previous_metadata
+                # use previous metadata if this is a set without players, i.e. game not played
+                if metadata["player0"] == "0" and previous_metadata is not None:
+                    metadata = previous_metadata
+                previous_metadata = metadata
+                
+                name = "Set %d - %s vs %s" % (i, metadata["race00"], metadata["race11"])
+                i = i + 1
+                yield {"url": url,
+                "title": name}
             
-            name = "Set %d - %s vs %s" % (i, metadata["race00"], metadata["race11"])
-            i = i + 1
-            yield {"url": url,
-                   "title": name}
-            
-            previous_metadata = metadata
+
             
         
     def live(self):
