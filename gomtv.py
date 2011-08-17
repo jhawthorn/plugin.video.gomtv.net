@@ -160,30 +160,34 @@ class GOMtv(object):
 
     def _get_set_info(self, setid, leagueid, vjoinid, quality, referer=None):
         url = "http://www.gomtv.net/gox/gox.gom?&target=vod&leagueid=%s&vjoinid=%s&strLevel=%s&" % (leagueid, vjoinid, quality)
+        
         r = self._request(url)
         if "ErrorMessage" in r:
             return None, None
-        
-        url = re.search("href='(.*)'", r).group(1)
-        url = url.replace("&amp;", "&")
-        
-        uno = re.search("uno=([0-9]+)", url).group(1)
-        nodeid = re.search("nodeid=([0-9]+)", url).group(1)
-        ip = re.search("ip=([0-9.]+)", url).group(1)
-        remote_ip = re.search("//([0-9.]+)/", url).group(1)
-        key = self._get_stream_key(remote_ip, uno, nodeid, ip)
+   
+        urls = re.findall("href='(.*)'", r)
+        for url in urls:
+            url = url.replace("&amp;", "&")
+            if url.find(vjoinid) == -1:
+                continue
+            uno = re.search("uno=([0-9]+)", url).group(1)
+            nodeid = re.search("nodeid=([0-9]+)", url).group(1)
+            ip = re.search("ip=([0-9.]+)", url).group(1)
+            remote_ip = re.search("//([0-9.]+)/", url).group(1)
+            key = self._get_stream_key(remote_ip, uno, nodeid, ip)
             
-        url = url + "&key=" + key
+            url = url + "&key=" + key
 
-        if setid is not None:
-            r = self._request("http://www.gomtv.net/process/ajaxCall.gom?src=getSetInfo&setid=%s" % setid,
-                              headers={"Accept": "application/json, text/javascript, */*",
+            if setid is not None:
+                r = self._request("http://www.gomtv.net/process/ajaxCall.gom?src=getSetInfo&setid=%s" % setid,
+                        headers={"Accept": "application/json, text/javascript, */*",
                                        "Referer": referer})
-            metadata = json.loads(r)
-        else:
-            metadata = None
+                metadata = json.loads(r)
+            else:
+                metadata = None
             
-        return url, metadata
+            return url, metadata
+            
             
     def get_vod_set(self, vod_url, quality="HQ", retrieve_metadata=True):
         r = self._request(vod_url)
