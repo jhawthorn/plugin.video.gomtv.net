@@ -210,6 +210,8 @@ class GOMtv(object):
         previous_metadata = None
         for match_set in match_sets:
             onclick = match_set["onclick"]
+            if onclick.find("player.changeAutoPlay()") > -1:
+                continue
             vjoinid = re.search("vjoinid'?:(.*)}",onclick).group(1)
             setid = None
             if retrieve_metadata:
