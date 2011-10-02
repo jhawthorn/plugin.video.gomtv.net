@@ -16,5 +16,6 @@
     <summary lang="en">GOMtv.net</summary>
     <description lang="en">GOMtv.net video plugin</description>
     <platform>all</platform>
+    <license>GPL 2.0</license>    
   </extension>
 </addon>
