@@ -43,8 +43,14 @@ class GOMtv(object):
             self.cookie_jar.load(cookie_path)
 
     def _request(self, url, data=None, headers={}):
+        # Ugly hack required to fix cookie names.
+        # Guessing there's some javascript somewhere on that mess of a website
+        # that uppercases the cookies..?
+        for cookie in self.cookie_jar:
+            if cookie.name.startswith("SES_"):
+                cookie.name = cookie.name.upper()
+
         urllib2.install_opener(urllib2.build_opener(urllib2.HTTPCookieProcessor(self.cookie_jar)))
-        
         if data is not None:
             data = urllib.urlencode(data)
         req = urllib2.Request(url, data, headers)
@@ -130,7 +136,7 @@ class GOMtv(object):
 
     def get_league_list(self):
         soup = BeautifulSoup(self._request("http://www.gomtv.net/view/channelDetails.gom?gameid=0"))
-        leagues = soup.find("dl", "league_list").findAll("dl", "league_list")
+        leagues = soup.findAll("dl", "league_list")
         result = []
         for league in leagues:
             result.append({"id": league.find("a")["href"].replace("/", ""),
@@ -158,26 +164,30 @@ class GOMtv(object):
                            "title": thumb_link.find("a", "thumb_link")["title"]})
         return result
 
-    def _get_set_info(self, setid, leagueid, vjoinid, quality, referer=None):
-        url = "http://www.gomtv.net/gox/gox.gom?&target=vod&leagueid=%s&vjoinid=%s&strLevel=%s&" % (leagueid, vjoinid, quality)
-        
+    def _get_set_info(self, setid, leagueid, vjoinid, quality, conid, referer=None):
+        url = "http://www.gomtv.net/gox/ggox.gom?&target=vod&leagueid=%s&vjoinid=%s&strLevel=%s&conid=%s" % (leagueid, vjoinid, quality, conid)
         r = self._request(url)
         if "ErrorMessage" in r:
             return None, None
-   
-        urls = re.findall("href='(.*)'", r)
+        
+        urls = re.findall("href=\"(.*)\"", r)
         for url in urls:
             url = url.replace("&amp;", "&")
             if url.find(vjoinid) == -1:
                 continue
             uno = re.search("uno=([0-9]+)", url).group(1)
             nodeid = re.search("nodeid=([0-9]+)", url).group(1)
-            ip = re.search("ip=([0-9.]+)", url).group(1)
+            ip = re.search("USERIP>([0-9.]+)", r).group(1)
             remote_ip = re.search("//([0-9.]+)/", url).group(1)
             key = self._get_stream_key(remote_ip, uno, nodeid, ip)
             
             url = url + "&key=" + key
 
+            #setid = re.search("SETID>([0-9]+)", r)
+            #if setid is not None:
+            #    setid = setid.group(1)
+            # TODO: Use metadata, screw it for now
+            setid = None
             if setid is not None:
                 r = self._request("http://www.gomtv.net/process/ajaxCall.gom?src=getSetInfo&setid=%s" % setid,
                         headers={"Accept": "application/json, text/javascript, */*",
@@ -185,66 +195,33 @@ class GOMtv(object):
                 metadata = json.loads(r)
             else:
                 metadata = None
-            
             return url, metadata
             
-            
+
+    def _get_set_params(self, soup):
+        player = soup.find(id="gslPlayer")
+        flashvars = player["flashvars"]
+        params = {}
+        for v in flashvars.split("&"):
+            tokens = v.split("=")
+            params[tokens[0]] = tokens[1]
+        return params
+        
     def get_vod_set(self, vod_url, quality="HQ", retrieve_metadata=True):
-        r = self._request(vod_url)
-        leagueid = re.search('"leagueid"\s*:\s*"(.*)",', r).group(1)
-        soup = BeautifulSoup(r)
-        matchset_div = soup.find("div", "matchset_set")
-        if soup.find("a", {"id": "set_hq"}) is None:
-            quality = "SQ"
-            
-        # single set..
-        if matchset_div is None:
-            vjoinid = re.search('"vjoinid"\s*:\s*"(.*)",', r).group(1)
-            url = self._get_set_info(None, leagueid, vjoinid, quality)[0]
-            # probably not logged in
+        num_sets = 1
+        i = 0
+        quality = "SQ"
+        while i < num_sets:
+            r = self._request(vod_url + "/?set=%d" % (i+1))
+            soup = BeautifulSoup(r)
+            num_sets = len(soup.findAll("li", "li_set"))
+            params = self._get_set_params(soup)
+            url, metadata = self._get_set_info(None, params["leagueid"], params["vjoinid"], quality, params["conid"], vod_url)
             if url is None:
                 return
             yield {"url": url,
-                   "title": "Set 1"}
-            return
-        
-        match_sets = matchset_div.findAll("a")
-        i = 1
-        result = []
-        previous_metadata = None
-        for match_set in match_sets:
-            onclick = match_set["onclick"]
-            if onclick.find("player.changeAutoPlay()") > -1:
-                continue
-            vjoinid = re.search("vjoinid'?:(.*)}",onclick).group(1)
-            setid = None
-            if retrieve_metadata:
-                if onclick.find("setsInfo(") > -1:
-                    setid = onclick[onclick.find("setsInfo('")+len("setsInfo('"):-1]
-                    setid = setid[0:setid.find("'")]
-            url, metadata = self._get_set_info(setid, leagueid, vjoinid, quality, vod_url)
-            # probably not logged in
-            if url is None:
-                return
-            
-            if metadata == None:
-                name = "Set %d" % (i)
-                i = i + 1
-                yield {"url": url,
-                       "title": name}
-            else:
-                # use previous metadata if this is a set without players, i.e. game not played
-                if metadata["player0"] == "0" and previous_metadata is not None:
-                    metadata = previous_metadata
-                previous_metadata = metadata
-                
-                name = "Set %d - %s vs %s" % (i, metadata["race00"], metadata["race11"])
-                i = i + 1
-                yield {"url": url,
-                "title": name}
-            
-
-            
+                   "title": "Set %d" % (i + 1)}
+            i = i + 1
         
     def live(self):
         soup = BeautifulSoup(self._request("http://www.gomtv.net"))
@@ -267,7 +244,6 @@ class GOMtv(object):
                 return {"sq": sq,
                         "hq": hq}
             else:
-                print url
                 url = re.search("LiveAddr=(.*)", url).group(1)
                 url = url.replace("&amp;", "&")
                 url = url.replace("&quot;", "%22")
