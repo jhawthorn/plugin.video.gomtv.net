@@ -210,7 +210,6 @@ class GOMtv(object):
     def get_vod_set(self, vod_url, quality="HQ", retrieve_metadata=True):
         num_sets = 1
         i = 0
-        quality = "SQ"
         while i < num_sets:
             r = self._request(vod_url + "/?set=%d" % (i+1))
             soup = BeautifulSoup(r)
