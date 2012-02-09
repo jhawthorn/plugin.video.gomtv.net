@@ -221,31 +221,41 @@ class GOMtv(object):
             yield {"url": url,
                    "title": "Set %d" % (i + 1)}
             i = i + 1
-        
-    def live(self):
-        soup = BeautifulSoup(self._request("http://www.gomtv.net"))
-        live_link = soup.find("a", "golive_on")
-        if live_link is None:
-            raise NoBroadcastException("".join(soup.find("span", "tooltip").findAll(text=True)))
-        else:
-            data = self._request("http://www.gomtv.net%s" % live_link["href"])
-            gox = re.search('var goxUrl[^=]*=[^"]*"(.*);', data).group(1)
-            gox = gox.replace('" + playType + "', "SQ")
-            gox = gox.replace('"+tmpThis.title', "title")
-            data = self._request(gox)
-            if data == "1001":
-                raise NotLoggedInException()
-            url = re.search('href="(.*)"', data).group(1)
-            if url.startswith("http"):
-                sq = url.replace("&amp;", "&")
-                data = self._request(gox.replace("SQ", "HQ"))
-                hq = re.search('href="(.*)"', data).group(1).replace("&amp;", "&")
-                return {"sq": sq,
-                        "hq": hq}
-            else:
-                url = re.search("LiveAddr=(.*)", url).group(1)
-                url = url.replace("&amp;", "&")
-                url = url.replace("&quot;", "%22")
-                return {"sq": urllib2.unquote(url)}
-                
+
+    def seconds2time(self, seconds):
+        days, rest = divmod(seconds, 86400)
+        hours, rest = divmod(rest, 3600)
+        minutes, rest = divmod(rest, 60)
+        def format_unit(val, name):
+            return "" if val == 0 else ("%d %s%s, " % (val, name, "" if val == 1 else "s"))
+        return "%s%s%s%s" % (format_unit(days, 'day'),
+                             format_unit(hours, 'hour'),
+                             format_unit(minutes, 'minute'),
+                             ("%d seconds" % rest))
     
+    def live(self):
+        data = self._request("http://www.gomtv.net/main/goLive.gom")
+        soup = BeautifulSoup(data)
+        left = int(re.search("var leftTime = '(-?[0-9]+)'", data).group(1));
+        if left > 0:
+            raise NoBroadcastException("Next broadcast starts in: %s" % self.seconds2time(left))
+
+        gox = re.search('[^/]var goxUrl[^=]*=[^"]*"(.*);', data).group(1)
+        gox = gox.replace('" + playType + "', "SQ")
+        gox = gox.replace('"+ tmpThis.title +"&"', "title")
+        data = self._request(gox)
+        if data == "1001":
+            raise NotLoggedInException()
+        url = re.search('href="(.*)"', data).group(1)
+        if url.startswith("http"):
+            sq = url.replace("&amp;", "&")
+            data = self._request(gox.replace("SQ", "HQ"))
+            hq = re.search('href="(.*)"', data).group(1).replace("&amp;", "&")
+            return {"sq": sq,
+                    "hq": hq}
+        # Not sure if this is applicable any more?
+        else:
+            url = re.search("LiveAddr=(.*)", url).group(1)
+            url = url.replace("&amp;", "&")
+            url = url.replace("&quot;", "%22")
+            return {"sq": urllib2.unquote(url)}
