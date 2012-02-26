@@ -62,9 +62,13 @@ def list_main(league=GOMtv.CURRENT_LEAGUE):
         return False
 
 def show_live():
-    g = GOMtv(BASE_COOKIE_PATH)
+    if xbmcplugin.getSetting(handle, "use_hq") == "true":
+        quality = "HQ"
+    else:
+        quality = "SQ"
+    g = GOMtv(BASE_COOKIE_PATH)    
     try:
-        ls = g.live()
+        ls = g.live(quality)
         for (k,v) in ls.items():
             addLink(k, v, "")
         return True
