@@ -264,7 +264,7 @@ class GOMtv(object):
             url = re.search('href="(.*)"', data).group(1)
             if url.startswith("http"):
                 u = url.replace("&amp;", "&")
-                result[choice["desc"]] = u        
+                result["FIXME"] = u        
         for choice in choices:
             data = self._request("http://www.gomtv.net%s" % choice["link"])
             soup = BeautifulSoup(data)
