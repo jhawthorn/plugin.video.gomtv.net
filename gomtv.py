@@ -254,6 +254,17 @@ class GOMtv(object):
                             "link": choice.find("a")["href"]})
 
         result = {}
+        if len(choices) == 0:
+            gox = re.search('[^/]var goxUrl[^=]*=[^"]*"(.*);', data).group(1)
+            gox = gox.replace('" + playType + "', quality)
+            gox = gox.replace('"+ tmpThis.title +"&"', "title")
+            data = self._request(gox)
+            if data == "1001":
+                raise NotLoggedInException()
+            url = re.search('href="(.*)"', data).group(1)
+            if url.startswith("http"):
+                u = url.replace("&amp;", "&")
+                result[choice["desc"]] = u        
         for choice in choices:
             data = self._request("http://www.gomtv.net%s" % choice["link"])
             soup = BeautifulSoup(data)
