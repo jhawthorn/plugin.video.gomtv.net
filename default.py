@@ -85,6 +85,9 @@ def list_leagues():
     return True
     
 def list_vods(order, page, league):
+    # ugh.. xbmc?!
+    if league == "None":
+        league = None
     g = GOMtv(BASE_COOKIE_PATH)
     result = g.get_vod_list(int(order), int(page), league)
     for vod in result["vods"]:
