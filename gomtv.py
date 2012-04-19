@@ -170,8 +170,12 @@ class GOMtv(object):
         url = "http://www.gomtv.net/%s/vod/index.gom?page=%d&order=%d&ltype=%d" % (league, page, order, type)
         soup = BeautifulSoup(self._request(url))
         thumb_links = soup.findAll("td", {"class": "listOff"})
-        last = int(re.search("page=([0-9]+)",
-                             soup.findAll("a", "num", href=re.compile("page=[0-9]+"))[-1]["href"]).group(1))
+        nums = soup.findAll("a", "num", href=re.compile("page=[0-9]+"))
+        if len(nums) > 0:
+            last = int(re.search("page=([0-9]+)",
+                                 nums[-1]["href"]).group(1))
+        else:
+            last = page
         vods = []
         result = {"order": order,
                   "page": page,
