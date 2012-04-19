@@ -12,7 +12,7 @@ Features
 
 Installing
 ====================
-* Download [plugin.video.gomtv.net-0.0.5.zip](https://bitbucket.org/henrik/plugin.video.gomtv.net/downloads/plugin.video.gomtv.net-0.0.5.zip)
+* Download [plugin.video.gomtv.net-0.0.6.zip](https://bitbucket.org/henrik/plugin.video.gomtv.net/downloads/plugin.video.gomtv.net-0.0.6.zip)
 * Start xbmc and navigate to system -> add-ons -> install from zip file, browse to the file.
 * Configure the add-on by navigating to system -> add-ons -> enabled addons -> video add-ons -> gomtv.net -> configure
 * You're done! Use the add-on from the add-ons item in the video-browser.
