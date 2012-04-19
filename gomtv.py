@@ -26,8 +26,8 @@ class GOMtv(object):
     VODLIST_TYPE_CODE_A = 16
     VODLIST_TYPE_UP_DOWN = 64
 
-    # ugly hack
-    CURRENT_LEAGUE = "videos"
+    # ugly hack, doesnt work anymore
+    # CURRENT_LEAGUE = "videos"
 
     AUTH_GOMTV = 1
     AUTH_TWITTER = 2
@@ -39,7 +39,7 @@ class GOMtv(object):
         self.cookie_jar = cookielib.LWPCookieJar(cookie_path)
         if not os.path.exists(os.path.dirname(cookie_path)):
             os.makedirs(os.path.dirname(cookie_path))
-        if (os.path.isfile(cookie_path)):
+        if (os.path.isfile(cookie_path) and os.path.getsize(cookie_path) > 0):
             self.cookie_jar.load(cookie_path)
 
     def _request(self, url, data=None, headers={}):
@@ -58,6 +58,8 @@ class GOMtv(object):
         ret = response.read()
         response.close()
         self.cookie_jar.save()
+        #print "url: %s" % url
+        #print "response:\n%s" % ret
         return ret
 
     def _get_stream_key(self, server_ip, uno, nodeid, local_ip):
@@ -143,12 +145,33 @@ class GOMtv(object):
                            "logo": league.find("img")["src"],
                            "name": league.find("strong").find(text=True)})
         return result
-            
-    def get_vod_list(self, order=1, page=1, league=CURRENT_LEAGUE, type=VODLIST_TYPE_ALL):
+
+    def get_most_recent_list(self):
+        url = "http://www.gomtv.net/"
+        soup = BeautifulSoup(self._request(url))
+        links = soup.find("div", "most_recent_box").findAll("a", {"class": None})
+        vods = []
+        result = {"order": self.VODLIST_ORDER_MOST_RECENT,
+                  "page": 1,
+                  "vods": vods,
+                  "has_previous": False,
+                  "has_next": False}
+        for link in links:
+            if link.find("img") is None:
+                continue
+            vods.append({"url": "http://www.gomtv.net%s" % link["href"],
+                         "preview": link.find("img")["src"],
+                         "title": link["title"]})
+        return result
+
+    def get_vod_list(self, order=1, page=1, league=None, type=VODLIST_TYPE_ALL):
+        if league is None:
+            return self.get_most_recent_list()
         url = "http://www.gomtv.net/%s/vod/index.gom?page=%d&order=%d&ltype=%d" % (league, page, order, type)
         soup = BeautifulSoup(self._request(url))
         thumb_links = soup.findAll("td", {"class": "listOff"})
-        last = int(re.search("page=([0-9]+)", soup.find("a", text="Last >>").parent["href"]).group(1))
+        last = int(re.search("page=([0-9]+)",
+                             soup.findAll("a", "num", href=re.compile("page=[0-9]+"))[-1]["href"]).group(1))
         vods = []
         result = {"order": order,
                   "page": page,
@@ -243,9 +266,9 @@ class GOMtv(object):
     def live(self, quality):
         data = self._request("http://www.gomtv.net/main/goLive.gom")
         soup = BeautifulSoup(data)
-        left = int(re.search("var leftTime = '(-?[0-9]+)'", data).group(1));
+        left = int(re.search("var leftTime\s*=\s*'?(-?[0-9]+)'?", data).group(1));
         if left > 0:
-            raise NoBroadcastException("Next broadcast starts in: %s" % self.seconds2time(left))
+            raise NoBroadcastException(("Next broadcast starts in: %s" % self.seconds2time(left)))
 
 
         choices = []

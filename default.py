@@ -48,13 +48,15 @@ def addDir(name, iconimage, func, **params):
                                        url = url,
                                        listitem = li,
                                        isFolder = True)
-def list_main(league=GOMtv.CURRENT_LEAGUE):
+def list_main(league=None):
     if login():
         addDir("Most recent", "", list_vods, page=1, order=GOMtv.VODLIST_ORDER_MOST_RECENT, league=league)
-        addDir("Most viewed", "", list_vods, page=1, order=GOMtv.VODLIST_ORDER_MOST_VIEWED, league=league)
-        addDir("Most commented", "", list_vods, page=1, order=GOMtv.VODLIST_ORDER_MOST_COMMENTED, league=league)
-        # Kind of ugly..
-        if league == GOMtv.CURRENT_LEAGUE:
+        # Kind of ugly 1!
+        if league is not None:
+            addDir("Most viewed", "", list_vods, page=1, order=GOMtv.VODLIST_ORDER_MOST_VIEWED, league=league)
+            addDir("Most commented", "", list_vods, page=1, order=GOMtv.VODLIST_ORDER_MOST_COMMENTED, league=league)
+        # Kind of ugly 2!
+        if league == None:
             addDir("Live", "", show_live)
             addDir("Leagues", "", list_leagues)
         return True
@@ -82,7 +84,7 @@ def list_leagues():
         addDir(league["name"], league["logo"], list_main, league=league["id"])
     return True
     
-def list_vods(order, page, league=GOMtv.CURRENT_LEAGUE):
+def list_vods(order, page, league):
     g = GOMtv(BASE_COOKIE_PATH)
     result = g.get_vod_list(int(order), int(page), league)
     for vod in result["vods"]:
