@@ -185,7 +185,7 @@ class GOMtv(object):
         if page > last or page < 1:
             return result
         for thumb_link in thumb_links:
-            href = thumb_link.find("a", "thumb_link")["href"].replace("/./", "/")
+            href = thumb_link.find("a", "vodlink")["href"].replace("/./", "/")
             vods.append({"url": "http://www.gomtv.net%s" % href,
                            "preview": thumb_link.find("img", "vodthumb")["src"],
                            "title": thumb_link.find("a", "thumb_link")["title"]})
