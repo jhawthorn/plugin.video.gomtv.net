@@ -34,6 +34,7 @@ class GOMtv(object):
     AUTH_FACEBOOK = 3
     
     def __init__(self, cookie_path=None):
+        self.vod_sets = {}
         if cookie_path is None:
             cookie_path = "%s%scookies_gomtv.txt" % (tempfile.gettempdir(), os.path.sep)
         self.cookie_jar = cookielib.LWPCookieJar(cookie_path)
