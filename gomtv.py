@@ -40,7 +40,7 @@ class GOMtv(object):
         if not os.path.exists(os.path.dirname(cookie_path)):
             os.makedirs(os.path.dirname(cookie_path))
         if (os.path.isfile(cookie_path) and os.path.getsize(cookie_path) > 0):
-            self.cookie_jar.load(cookie_path)
+            self.cookie_jar.load(cookie_path,True)
 
     def _request(self, url, data=None, headers={}):
         # Ugly hack required to fix cookie names.
@@ -57,7 +57,7 @@ class GOMtv(object):
         response = urllib2.urlopen(req)
         ret = response.read()
         response.close()
-        self.cookie_jar.save()
+        self.cookie_jar.save(None,True)
         #print "url: %s" % url
         #print "response:\n%s" % ret
         return ret
@@ -81,6 +81,7 @@ class GOMtv(object):
         
 
     def login(self, username, password, auth_type=AUTH_GOMTV):
+        self.cookie_jar.clear_session_cookies()
         if auth_type == self.AUTH_GOMTV:
             ret = self._request("http://www.gomtv.net/user/loginProcess.gom", {"mb_username": username,
                                                                                "mb_password": password,
