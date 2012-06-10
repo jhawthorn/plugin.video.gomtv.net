@@ -194,14 +194,12 @@ class GOMtv(object):
 
     def _get_set_info(self, setid, leagueid, vjoinid, quality, conid, referer=None):
         vod_key = (leagueid, vjoinid, quality, conid)
-        xbmc.log("Looking for key %s" % ", ".join(vod_key))
 
         if vod_key not in self.vod_sets:
             url = "http://www.gomtv.net/gox/ggox.gom?&target=vod&leagueid=%s&vjoinid=%s&strLevel=%s&conid=%s" % vod_key
             r = self._request(url)
             if "ErrorMessage" in r:
                 return None, None
-            xbmc.log(r)
             
             urls = re.findall("href=\"(.*)\"", r)
             for url in urls:
