@@ -237,7 +237,7 @@ class GOMtv(object):
             if url is None:
                 return
             yield {"url": url,
-                   "title": "Set %d" % (i + 1)}
+                   "title": "Game %d" % (i + 1)}
             i = i + 1
 
     def seconds2time(self, seconds):
