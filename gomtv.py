@@ -193,38 +193,29 @@ class GOMtv(object):
         return result
 
     def _get_set_info(self, setid, leagueid, vjoinid, quality, conid, referer=None):
-        url = "http://www.gomtv.net/gox/ggox.gom?&target=vod&leagueid=%s&vjoinid=%s&strLevel=%s&conid=%s" % (leagueid, vjoinid, quality, conid)
-        r = self._request(url)
-        if "ErrorMessage" in r:
-            return None, None
-        
-        urls = re.findall("href=\"(.*)\"", r)
-        for url in urls:
-            url = url.replace("&amp;", "&")
-            if url.find(vjoinid) == -1:
-                continue
-            uno = re.search("uno=([0-9]+)", url).group(1)
-            nodeid = re.search("nodeid=([0-9]+)", url).group(1)
-            ip = re.search("USERIP>([0-9.]+)", r).group(1)
-            remote_ip = re.search("//([0-9.]+)/", url).group(1)
-            key = self._get_stream_key(remote_ip, uno, nodeid, ip)
-            
-            url = url + "&key=" + key
+        vod_key = (leagueid, vjoinid, quality, conid)
+        xbmc.log("Looking for key %s" % ", ".join(vod_key))
 
-            #setid = re.search("SETID>([0-9]+)", r)
-            #if setid is not None:
-            #    setid = setid.group(1)
-            # TODO: Use metadata, screw it for now
-            setid = None
-            if setid is not None:
-                r = self._request("http://www.gomtv.net/process/ajaxCall.gom?src=getSetInfo&setid=%s" % setid,
-                        headers={"Accept": "application/json, text/javascript, */*",
-                                       "Referer": referer})
-                metadata = json.loads(r)
-            else:
-                metadata = None
-            return url, metadata
+        if vod_key not in self.vod_sets:
+            url = "http://www.gomtv.net/gox/ggox.gom?&target=vod&leagueid=%s&vjoinid=%s&strLevel=%s&conid=%s" % vod_key
+            r = self._request(url)
+            if "ErrorMessage" in r:
+                return None, None
+            xbmc.log(r)
             
+            urls = re.findall("href=\"(.*)\"", r)
+            for url in urls:
+                url = url.replace("&amp;", "&")
+                url_vjoinid = re.search("vjoinid=([0-9]+)",url).group(1)
+                url_vod_key = (leagueid, url_vjoinid, quality, conid)
+                uno = re.search("uno=([0-9]+)", url).group(1)
+                nodeid = re.search("nodeid=([0-9]+)", url).group(1)
+                ip = re.search("USERIP>([0-9.]+)", r).group(1)
+                remote_ip = re.search("//([0-9.]+)/", url).group(1)
+                key = self._get_stream_key(remote_ip, uno, nodeid, ip)
+                url = url + "&key=" + key
+                self.vod_sets[url_vod_key] = (url,None)
+        return self.vod_sets.pop(vod_key)
 
     def _get_set_params(self, soup):
         player = soup.find(id="gslPlayer")
