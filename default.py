@@ -24,6 +24,21 @@ def login():
         return False    
     return True
 
+def genCallback(func,**params):
+    url = "%s?method=%s" % (sys.argv[0], func.__name__)
+    if len(params.items()) > 0:
+        for (k,v) in params.items():
+            url = url + "&%s=%s" % (urllib.quote_plus(k), urllib.quote_plus(str(v)))
+    return url
+
+def playVod(name,url,quality,retrieve_metadata):
+    g = GOMtv(BASE_COOKIE_PATH)
+    url = g.get_vod_set_url(url, quality, retrieve_metadata)
+    li = xbmcgui.ListItem(name)
+    li.setInfo( type="Video", infoLabels={ "Title": name } )
+    li.setProperty('mimetype', 'video/x-flv')
+    xbmc.Player( xbmc.PLAYER_CORE_MPLAYER ).play(url, li, False)
+
 def addLink(name, url, iconimage):
     xbmc.log("adding link: %s -> %s" % (name, url), xbmc.LOGDEBUG)
     name = name.encode("utf-8")
@@ -105,8 +120,11 @@ def list_vod_set(url):
         quality = "SQ"
     g = GOMtv(BASE_COOKIE_PATH)
     retrieve_metadata = xbmcplugin.getSetting(handle, "show_races") == "true"
-    for s in g.get_vod_set(url, quality, retrieve_metadata):
-        addLink(s["title"], s["url"], "")
+    for s in g.get_vod_set(url):
+        url = genCallback(playVod,name=s["title"],url=s["url"],
+                          quality=quality,
+                          retrieve_metadata = retrieve_metadata)
+        addLink(s["title"], url, "")
     return True
 
 def get_params():

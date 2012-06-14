@@ -228,17 +228,26 @@ class GOMtv(object):
     def get_vod_set(self, vod_url, quality="HQ", retrieve_metadata=True):
         num_sets = 1
         i = 0
+        r = self._request(vod_url + "/?set=%d" % (i+1))
+        soup = BeautifulSoup(r)
+        params = self._get_set_params(soup)
+        self._get_set_info(None, params["leagueid"], params["vjoinid"], quality, params["conid"], vod_url)
+
+        num_sets = len(soup.findAll("li", "li_set"))
         while i < num_sets:
-            r = self._request(vod_url + "/?set=%d" % (i+1))
-            soup = BeautifulSoup(r)
-            num_sets = len(soup.findAll("li", "li_set"))
-            params = self._get_set_params(soup)
-            url, metadata = self._get_set_info(None, params["leagueid"], params["vjoinid"], quality, params["conid"], vod_url)
-            if url is None:
-                return
-            yield {"url": url,
-                   "title": "Game %d" % (i + 1)}
+            yield {"url": vod_url + "/?set=%d" % (i+1),
+                    "title": "Game %d" % (i + 1)}
             i = i + 1
+
+    def get_vod_set_url(self, set_url, quality="HQ", retrieve_metadata=True):
+        r = self._request(set_url)
+        soup = BeautifulSoup(r)
+        params = self._get_set_params(soup)
+        url, metadata = self._get_set_info(None, params["leagueid"], params["vjoinid"], quality, params["conid"], set_url)
+        if url is None:
+            return
+        return url
+
 
     def seconds2time(self, seconds):
         days, rest = divmod(seconds, 86400)
