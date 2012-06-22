@@ -42,7 +42,7 @@ def playVod(name,url,quality,retrieve_metadata):
     li = xbmcgui.ListItem(name)
     li.setInfo( type="Video", infoLabels={ "Title": name } )
     li.setProperty('mimetype', 'video/x-flv')
-    xbmc.Player( xbmc.PLAYER_CORE_MPLAYER ).play(url, li, False)
+    xbmc.Player( xbmc.PLAYER_CORE_AUTO ).play(url, li, False)
 
 def addLink(name, url, iconimage):
     xbmc.log("adding link: %s -> %s" % (name, url), xbmc.LOGDEBUG)
