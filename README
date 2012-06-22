@@ -8,18 +8,14 @@ Features
 ====================
 * Browsing of Most recent/Most viewed/Most commented vods
 * Playback of vods
-* Live watching (hopefully)
 
 Installing
 ====================
-* Download [plugin.video.gomtv.net-0.0.6.zip](https://bitbucket.org/henrik/plugin.video.gomtv.net/downloads/plugin.video.gomtv.net-0.0.6.zip)
+* Download [plugin.video.gomtv.net-0.0.7.zip](https://bitbucket.org/medlefsen/plugin.video.gomtv.net/downloads/plugin.video.gomtv.net-0.0.7.zip)
 * Start xbmc and navigate to system -> add-ons -> install from zip file, browse to the file.
 * Configure the add-on by navigating to system -> add-ons -> enabled addons -> video add-ons -> gomtv.net -> configure
 * You're done! Use the add-on from the add-ons item in the video-browser.
 
 Known issues
 ====================
-* After starting to watch a vod (and probably livestream too), you can't watch it again unless you
-  go to the previous directory and then back again. This is because the urls that are generated have
-  a one-time key.
-  
+* Live is currently broken
