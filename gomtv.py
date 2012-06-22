@@ -2,6 +2,7 @@ import urllib, urllib2, re, cookielib, socket, os, tempfile
 from BeautifulSoup import BeautifulSoup
 import simplejson as json
 from time import time
+import proxy
 
 class NotLoggedInException(Exception):
     pass
@@ -33,7 +34,8 @@ class GOMtv(object):
     AUTH_TWITTER = 2
     AUTH_FACEBOOK = 3
     
-    def __init__(self, cookie_path=None):
+    def __init__(self, cookie_path=None, use_proxy=True):
+        self.use_proxy = use_proxy
         self.vod_sets = {}
         if cookie_path is None:
             cookie_path = "%s%scookies_gomtv.txt" % (tempfile.gettempdir(), os.path.sep)
@@ -211,10 +213,18 @@ class GOMtv(object):
                 nodeid = re.search("nodeid=([0-9]+)", url).group(1)
                 ip = re.search("USERIP>([0-9.]+)", r).group(1)
                 remote_ip = re.search("//([0-9.]+)/", url).group(1)
-                key = self._get_stream_key(remote_ip, uno, nodeid, ip)
-                url = url + "&key=" + key
+
+                if self.use_proxy:
+                  url = proxy.url({'payload': "Login,0,%s,%s,%s\n" % (uno, nodeid, ip),'dest': url})
+                else:
+                  key = self._get_stream_key(remote_ip, uno, nodeid, ip)
+                  url = url + "&key=" + key
+
                 self.vod_sets[url_vod_key] = (url,None)
-        return self.vod_sets.pop(vod_key)
+        if self.use_proxy:
+          return self.vod_sets[vod_key]
+        else:
+          return self.vod_sets.pop(vod_key)
 
     def _get_set_params(self, soup):
         player = soup.find(id="gslPlayer")

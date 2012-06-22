@@ -1,16 +1,21 @@
-import urllib, urllib2, re, xbmcplugin, xbmcgui, os, xbmc, cookielib, socket
+import urllib, urllib2, re, xbmcplugin, xbmcgui, os, xbmc, xbmcaddon, cookielib, socket
 from BeautifulSoup import BeautifulSoup
 from gomtv import GOMtv, NoBroadcastException, NotLoggedInException
 
-BASE_COOKIE_PATH = os.path.join(xbmc.translatePath( "special://profile/" ), "addon_data", os.path.basename(os.getcwd()), 'cookie.txt')
+BASE_COOKIE_PATH = os.path.join(xbmc.translatePath( "special://profile/" ), "addon_data", "plugin.video.gomtv.net", 'cookie.txt')
 handle = int(sys.argv[1])
+addon = xbmcaddon.Addon(id="plugin.video.gomtv.net")
+
+def gomtv():
+  use_proxy = (addon.getSetting("seek_workaround") == "true")
+  return GOMtv(BASE_COOKIE_PATH,use_proxy=use_proxy)
 
 def setting_defined(setting_id):
     s = xbmcplugin.getSetting(handle, setting_id)
     return s is not None and len(s) > 0
 
 def login():
-    g = GOMtv(BASE_COOKIE_PATH)
+    g = gomtv()
     auth_type = GOMtv.AUTH_GOMTV
     if xbmcplugin.getSetting(handle, "account_type") == "Twitter":
         auth_type = GOMtv.AUTH_TWITTER
@@ -32,7 +37,7 @@ def genCallback(func,**params):
     return url
 
 def playVod(name,url,quality,retrieve_metadata):
-    g = GOMtv(BASE_COOKIE_PATH)
+    g = gomtv()
     url = g.get_vod_set_url(url, quality, retrieve_metadata)
     li = xbmcgui.ListItem(name)
     li.setInfo( type="Video", infoLabels={ "Title": name } )
@@ -83,7 +88,7 @@ def show_live():
         quality = "HQ"
     else:
         quality = "SQ"
-    g = GOMtv(BASE_COOKIE_PATH)    
+    g = gomtv()    
     try:
         ls = g.live(quality)
         for (k,v) in ls.items():
@@ -93,7 +98,7 @@ def show_live():
         xbmcgui.Dialog().ok("No live broadcast", nbe.msg)
 
 def list_leagues():
-    g = GOMtv(BASE_COOKIE_PATH)
+    g = gomtv()
     leagues = g.get_league_list()
     for league in leagues:
         addDir(league["name"], league["logo"], list_main, league=league["id"])
@@ -103,7 +108,7 @@ def list_vods(order, page, league):
     # ugh.. xbmc?!
     if league == "None":
         league = None
-    g = GOMtv(BASE_COOKIE_PATH)
+    g = gomtv()
     result = g.get_vod_list(int(order), int(page), league)
     for vod in result["vods"]:
         addDir(vod["title"], vod["preview"], list_vod_set, url=vod["url"])
@@ -118,7 +123,7 @@ def list_vod_set(url):
         quality = "HQ"
     else:
         quality = "SQ"
-    g = GOMtv(BASE_COOKIE_PATH)
+    g = gomtv()
     retrieve_metadata = xbmcplugin.getSetting(handle, "show_races") == "true"
     for s in g.get_vod_set(url):
         url = genCallback(playVod,name=s["title"],url=s["url"],

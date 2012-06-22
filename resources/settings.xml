@@ -5,4 +5,6 @@
   <setting label="30003" type="labelenum" id="account_type" default="GOMTV.net" values="GOMTV.net|Twitter|Facebook"/>
   <setting label="30002" type="bool" id="use_hq" default="true"/>
   <setting label="30007" type="bool" id="show_races" default="false"/>
+  <setting label="30008" type="bool" id="seek_workaround" default="true"/>
+  <setting label="30009" type="slider" id="seek_buffer_size" enable="eq(-1,true)" default="8" range="1,32" option="int"/>
 </settings>
