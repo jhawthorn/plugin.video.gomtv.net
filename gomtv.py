@@ -233,16 +233,13 @@ class GOMtv(object):
         return params
         
     def get_vod_set(self, vod_url, quality="HQ", retrieve_metadata=True):
-        num_sets = 1
-        i = 0
-        r = self._request(vod_url + "/?set=%d" % (i+1))
+        r = self._request(vod_url + "/?set=%d" % (1))
         soup = BeautifulSoup(r)
 
-        num_sets = len(soup.findAll("li", "li_set"))
-        while i < num_sets:
-            yield {"url": vod_url + "/?set=%d" % (i+1),
-                    "title": "Game %d" % (i + 1)}
-            i = i + 1
+        sets = soup.findAll("li", "li_set")
+        for (i, s) in enumerate(sets, 1):
+            yield {"url": vod_url + "/?set=%d" % i,
+                    "title": "Game %s" % s.text}
 
     def get_vod_set_url(self, set_url, quality="HQ", retrieve_metadata=True):
         r = self._request(set_url)
