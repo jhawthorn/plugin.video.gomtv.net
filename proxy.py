@@ -7,6 +7,7 @@ try:
   import xbmc
   import xbmcaddon
   IN_XBMC=True
+  addon = xbmcaddon.Addon(id='plugin.video.gomtv.net')
 except (ImportError):
   IN_XBMC=False
 
@@ -16,7 +17,6 @@ def log(msg):
   else:
     print msg
 
-addon = xbmcaddon.Addon(id='plugin.video.gomtv.net')
 BLOCK_SIZE=1024 * 8
 START_PORT=38234
 BUFFER_SIZE=1024 * 1024 * 2

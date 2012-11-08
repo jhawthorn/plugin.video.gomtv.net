@@ -195,7 +195,7 @@ class GOMtv(object):
                            "title": thumb_link.find("a", "thumb_link")["title"]})
         return result
 
-    def _get_set_info(self, setid, leagueid, vjoinid, quality, conid, referer=None):
+    def _get_set_info(self, leagueid, vjoinid, quality, conid):
         vod_key = (leagueid, vjoinid, quality, conid)
 
         if vod_key not in self.vod_sets:
@@ -214,17 +214,14 @@ class GOMtv(object):
                 ip = re.search("USERIP>([0-9.]+)", r).group(1)
                 remote_ip = re.search("//([0-9.]+)/", url).group(1)
 
-                if self.use_proxy:
-                  url = proxy.url({'payload': "Login,0,%s,%s,%s\n" % (uno, nodeid, ip),'dest': url})
-                else:
-                  key = self._get_stream_key(remote_ip, uno, nodeid, ip)
-                  url = url + "&key=" + key
-
-                self.vod_sets[url_vod_key] = (url,None)
+                self.vod_sets[url_vod_key] = (url, (remote_ip, uno, nodeid, ip))
         if self.use_proxy:
-          return self.vod_sets[vod_key]
+          url, (remote_ip, uno, nodeid, ip) = self.vod_sets.pop(vod_key)
+          return proxy.url({'payload': "Login,0,%s,%s,%s\n" % (uno, nodeid, ip),'dest': url})
         else:
-          return self.vod_sets.pop(vod_key)
+          url, (remote_ip, uno, nodeid, ip) = self.vod_sets[vod_key]
+          key = self._get_stream_key(remote_ip, uno, nodeid, ip)
+          return url + "&key=" + key
 
     def _get_set_params(self, soup):
         player = soup.find(id="gslPlayer")
@@ -240,8 +237,6 @@ class GOMtv(object):
         i = 0
         r = self._request(vod_url + "/?set=%d" % (i+1))
         soup = BeautifulSoup(r)
-        params = self._get_set_params(soup)
-        self._get_set_info(None, params["leagueid"], params["vjoinid"], quality, params["conid"], vod_url)
 
         num_sets = len(soup.findAll("li", "li_set"))
         while i < num_sets:
@@ -253,9 +248,7 @@ class GOMtv(object):
         r = self._request(set_url)
         soup = BeautifulSoup(r)
         params = self._get_set_params(soup)
-        url, metadata = self._get_set_info(None, params["leagueid"], params["vjoinid"], quality, params["conid"], set_url)
-        if url is None:
-            return
+        url = self._get_set_info(params["leagueid"], params["vjoinid"], quality, params["conid"])
         return url
 
 
@@ -301,7 +294,7 @@ class GOMtv(object):
             url = re.search('href="(.*)"', data).group(1)
             if url.startswith("http"):
                 u = url.replace("&amp;", "&")
-                result["FIXME"] = u        
+                result["FIXME"] = u
         for choice in choices:
             data = self._request("http://www.gomtv.net%s" % choice["link"])
             soup = BeautifulSoup(data)
