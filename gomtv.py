@@ -151,21 +151,19 @@ class GOMtv(object):
         return result
 
     def get_most_recent_list(self):
-        url = "http://www.gomtv.net/"
+        url = "http://www.gomtv.net/videos/index.gom"
         soup = BeautifulSoup(self._request(url))
-        links = soup.find("div", "most_recent_box").findAll("a", {"class": None})
+        thumb_links = soup.findAll("td", {"class": "vod_info"})
         vods = []
         result = {"order": self.VODLIST_ORDER_MOST_RECENT,
                   "page": 1,
                   "vods": vods,
                   "has_previous": False,
                   "has_next": False}
-        for link in links:
-            if link.find("img") is None:
-                continue
-            vods.append({"url": "http://www.gomtv.net%s" % link["href"],
-                         "preview": link.find("img")["src"],
-                         "title": link["title"]})
+        for thumb_link in thumb_links:
+            href = thumb_link.find("a", "vod_link")["href"].replace("/./", "/")
+            thumb = thumb_link.find("img", "v_thumb")
+            vods.append({"url": "http://www.gomtv.net%s" % href, "preview": thumb["src"], "title": thumb["alt"]})
         return result
 
     def get_vod_list(self, order=1, page=1, league=None, type=VODLIST_TYPE_ALL):
@@ -239,7 +237,7 @@ class GOMtv(object):
         sets = soup.findAll("li", "li_set")
         for (i, s) in enumerate(sets, 1):
             yield {"url": vod_url + "/?set=%d" % i,
-                    "title": "Game %s" % s.text}
+                    "title": "%i - Game %s" % (i, s.text)}
 
     def get_vod_set_url(self, set_url, quality="HQ", retrieve_metadata=True):
         r = self._request(set_url)
