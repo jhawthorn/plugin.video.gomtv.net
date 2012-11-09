@@ -6,12 +6,12 @@ BASE_COOKIE_PATH = os.path.join(xbmc.translatePath( "special://profile/" ), "add
 handle = int(sys.argv[1])
 addon = xbmcaddon.Addon(id="plugin.video.gomtv.net")
 
-def gomtv():
-  use_proxy = (addon.getSetting("seek_workaround") == "true")
-  return GOMtv(BASE_COOKIE_PATH,use_proxy=use_proxy)
-
 def get_setting(setting_id):
     return xbmcplugin.getSetting(handle, setting_id)
+
+def gomtv():
+  use_proxy = (get_setting("seek_workaround") == "true")
+  return GOMtv(BASE_COOKIE_PATH,use_proxy=use_proxy)
 
 def login():
     g = gomtv()
@@ -34,20 +34,22 @@ def genCallback(func,**params):
             url = url + "&%s=%s" % (urllib.quote_plus(k), urllib.quote_plus(str(v)))
     return url
 
-def playVod(name,url,quality):
-    g = gomtv()
-    url = g.get_vod_set_url(url, quality)
+def build_listItem(name):
     li = xbmcgui.ListItem(name)
     li.setInfo( type="Video", infoLabels={ "Title": name } )
     li.setProperty('mimetype', 'video/x-flv')
+    return li
+
+def playVod(name,url,quality):
+    g = gomtv()
+    url = g.get_vod_set_url(url, quality)
+    li = build_listItem(name)
     xbmc.Player( xbmc.PLAYER_CORE_AUTO ).play(url, li, False)
 
 def addLink(name, url, iconimage):
     xbmc.log("adding link: %s -> %s" % (name, url), xbmc.LOGDEBUG)
     name = name.encode("utf-8")
-    li = xbmcgui.ListItem(name, iconImage="DefaultVideo.png", thumbnailImage=iconimage)
-    li.setInfo( type="Video", infoLabels={ "Title": name } )
-    li.setProperty('mimetype', 'video/x-flv')
+    li = build_listItem(name)
     return xbmcplugin.addDirectoryItem(handle = handle,
                                        url = url,
                                        listitem = li)
@@ -55,9 +57,8 @@ def addLink(name, url, iconimage):
 def addDir(name, iconimage, func, **params):
     name = name.encode("utf-8")
     url = "%s?method=%s" % (sys.argv[0], func.__name__)
-    if len(params.items()) > 0:
-        for (k,v) in params.items():
-            url = url + "&%s=%s" % (urllib.quote_plus(k), urllib.quote_plus(str(v)))
+    for (k,v) in params.items():
+        url = url + "&%s=%s" % (urllib.quote_plus(k), urllib.quote_plus(str(v)))
     li = xbmcgui.ListItem(name,
                           iconImage="DefaultFolder.png",
                           thumbnailImage=iconimage)
@@ -82,7 +83,7 @@ def list_main(league=None):
         return False
 
 def get_quality():
-    if xbmcplugin.getSetting(handle, "use_hq") == "true":
+    if get_setting("use_hq") == "true":
         return "HQ"
     else:
         return "SQ"
@@ -131,11 +132,7 @@ def get_params():
     return dict((key, urllib.unquote_plus(value)) for key, value in params)
 
 params = get_params()
-if not "method" in params:
-    params["method"] = "list_main"
-
-func = locals()[params["method"]]
-del params["method"]
+func = locals()[params.pop("method", "list_main")]
 try:
     if func.__call__(**params):
         xbmcplugin.endOfDirectory(handle)
