@@ -34,7 +34,7 @@ class GOMtv(object):
     AUTH_TWITTER = 2
     AUTH_FACEBOOK = 3
     
-    def __init__(self, cookie_path=None, use_proxy=True):
+    def __init__(self, cookie_path=None, use_proxy=False):
         self.use_proxy = use_proxy
         self.vod_sets = {}
         if cookie_path is None:
@@ -221,14 +221,11 @@ class GOMtv(object):
           key = self._get_stream_key(remote_ip, uno, nodeid, ip)
           return url + "&key=" + key
 
-    def _get_set_params(self, soup):
-        player = soup.find(id="gslPlayer")
-        flashvars = player["flashvars"]
-        params = {}
-        for v in flashvars.split("&"):
-            tokens = v.split("=")
-            params[tokens[0]] = tokens[1]
-        return params
+    def _get_set_params(self, body):
+        flashvars = re.search("FlashVars=\"([^\"]+)\"", body).group(1)
+        params = [v.split('=',1) for v in flashvars.split("&")]
+        params = [(key, urllib.unquote_plus(urllib.unquote(value))) for (key, value) in params]
+        return dict(params)
         
     def get_vod_set(self, vod_url, quality="HQ"):
         r = self._request(vod_url + "/?set=%d" % (1))
@@ -241,8 +238,7 @@ class GOMtv(object):
 
     def get_vod_set_url(self, set_url, quality="HQ"):
         r = self._request(set_url)
-        soup = BeautifulSoup(r)
-        params = self._get_set_params(soup)
+        params = self._get_set_params(r)
         url = self._get_set_info(params["leagueid"], params["vjoinid"], quality, params["conid"])
         return url
 
