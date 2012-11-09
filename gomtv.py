@@ -1,7 +1,5 @@
 import urllib, urllib2, re, cookielib, socket, os, tempfile
 from BeautifulSoup import BeautifulSoup
-import simplejson as json
-from time import time
 import proxy
 
 class NotLoggedInException(Exception):

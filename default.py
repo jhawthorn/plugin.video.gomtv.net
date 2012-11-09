@@ -1,5 +1,4 @@
-import urllib, urllib2, re, xbmcplugin, xbmcgui, os, xbmc, xbmcaddon, cookielib, socket
-from BeautifulSoup import BeautifulSoup
+import urllib, re, xbmcplugin, xbmcgui, os, xbmc, xbmcaddon
 from gomtv import GOMtv, NoBroadcastException, NotLoggedInException
 
 BASE_COOKIE_PATH = os.path.join(xbmc.translatePath( "special://profile/" ), "addon_data", "plugin.video.gomtv.net", 'cookie.txt')
