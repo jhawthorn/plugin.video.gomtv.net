@@ -44,13 +44,6 @@ class GOMtv(object):
         urllib2.install_opener(opener)
 
     def _request(self, url, data=None, headers={}):
-        # Ugly hack required to fix cookie names.
-        # Guessing there's some javascript somewhere on that mess of a website
-        # that uppercases the cookies..?
-        for cookie in self.cookie_jar:
-            if cookie.name.startswith("SES_"):
-                cookie.name = cookie.name.upper()
-
         if data is not None:
             data = urllib.urlencode(data)
         req = urllib2.Request(url, data, headers)
