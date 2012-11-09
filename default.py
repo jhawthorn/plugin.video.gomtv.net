@@ -56,9 +56,7 @@ def addLink(name, url, iconimage):
 
 def addDir(name, iconimage, func, **params):
     name = name.encode("utf-8")
-    url = "%s?method=%s" % (sys.argv[0], func.__name__)
-    for (k,v) in params.items():
-        url = url + "&%s=%s" % (urllib.quote_plus(k), urllib.quote_plus(str(v)))
+    url = genCallback(func, **params)
     li = xbmcgui.ListItem(name,
                           iconImage="DefaultFolder.png",
                           thumbnailImage=iconimage)
