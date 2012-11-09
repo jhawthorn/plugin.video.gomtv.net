@@ -230,7 +230,7 @@ class GOMtv(object):
             params[tokens[0]] = tokens[1]
         return params
         
-    def get_vod_set(self, vod_url, quality="HQ", retrieve_metadata=True):
+    def get_vod_set(self, vod_url, quality="HQ"):
         r = self._request(vod_url + "/?set=%d" % (1))
         soup = BeautifulSoup(r)
 
@@ -239,7 +239,7 @@ class GOMtv(object):
             yield {"url": vod_url + "/?set=%d" % i,
                     "title": "%i - Game %s" % (i, s.text)}
 
-    def get_vod_set_url(self, set_url, quality="HQ", retrieve_metadata=True):
+    def get_vod_set_url(self, set_url, quality="HQ"):
         r = self._request(set_url)
         soup = BeautifulSoup(r)
         params = self._get_set_params(soup)

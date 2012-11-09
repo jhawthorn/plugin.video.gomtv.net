@@ -29,7 +29,7 @@ if __name__  == "__main__":
     print "MOST RECENT"
     pp.pprint(result)
     for i in range(len(result["vods"])):
-        result2 = gom.get_vod_set(result["vods"][i]["url"], "HQ", True)
+        result2 = gom.get_vod_set(result["vods"][i]["url"], "HQ")
         print "MOST RECENT VOD %d SETS" % i
         for s in result2:
             pp.pprint(s)

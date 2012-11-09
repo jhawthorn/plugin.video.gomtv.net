@@ -26,7 +26,7 @@ def login():
         return False
     elif not g.login(xbmcplugin.getSetting(handle, "username"), xbmcplugin.getSetting(handle, "password"), auth_type) == GOMtv.LOGIN_SUCCESS:
         xbmcgui.Dialog().ok("Login failed", "login failed")
-        return False    
+        return False
     return True
 
 def genCallback(func,**params):
@@ -36,9 +36,9 @@ def genCallback(func,**params):
             url = url + "&%s=%s" % (urllib.quote_plus(k), urllib.quote_plus(str(v)))
     return url
 
-def playVod(name,url,quality,retrieve_metadata):
+def playVod(name,url,quality):
     g = gomtv()
-    url = g.get_vod_set_url(url, quality, retrieve_metadata)
+    url = g.get_vod_set_url(url, quality)
     li = xbmcgui.ListItem(name)
     li.setInfo( type="Video", infoLabels={ "Title": name } )
     li.setProperty('mimetype', 'video/x-flv')
@@ -83,14 +83,16 @@ def list_main(league=None):
     else:
         return False
 
-def show_live():
+def get_quality():
     if xbmcplugin.getSetting(handle, "use_hq") == "true":
-        quality = "HQ"
+        return "HQ"
     else:
-        quality = "SQ"
-    g = gomtv()    
+        return "SQ"
+
+def show_live():
+    g = gomtv()
     try:
-        ls = g.live(quality)
+        ls = g.live(get_quality())
         for (k,v) in ls.items():
             addLink(k, v, "")
         return True
@@ -103,7 +105,7 @@ def list_leagues():
     for league in leagues:
         addDir(league["name"], league["logo"], list_main, league=league["id"])
     return True
-    
+
 def list_vods(order, page, league):
     # ugh.. xbmc?!
     if league == "None":
@@ -119,16 +121,10 @@ def list_vods(order, page, league):
     return True
 
 def list_vod_set(url):
-    if xbmcplugin.getSetting(handle, "use_hq") == "true":
-        quality = "HQ"
-    else:
-        quality = "SQ"
     g = gomtv()
-    retrieve_metadata = xbmcplugin.getSetting(handle, "show_races") == "true"
     for s in g.get_vod_set(url):
         url = genCallback(playVod,name=s["title"],url=s["url"],
-                          quality=quality,
-                          retrieve_metadata = retrieve_metadata)
+                          quality=get_quality())
         addLink(s["title"], url, "")
     return True
 
@@ -149,5 +145,4 @@ except NotLoggedInException:
     if login():
         if func.__call__(**params):
             xbmcplugin.endOfDirectory(handle)
-        
-    
+
