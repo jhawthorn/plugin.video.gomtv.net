@@ -10,24 +10,22 @@ def gomtv():
   use_proxy = (addon.getSetting("seek_workaround") == "true")
   return GOMtv(BASE_COOKIE_PATH,use_proxy=use_proxy)
 
-def setting_defined(setting_id):
-    s = xbmcplugin.getSetting(handle, setting_id)
-    return s is not None and len(s) > 0
+def get_setting(setting_id):
+    return xbmcplugin.getSetting(handle, setting_id)
 
 def login():
     g = gomtv()
-    auth_type = GOMtv.AUTH_GOMTV
-    if xbmcplugin.getSetting(handle, "account_type") == "Twitter":
-        auth_type = GOMtv.AUTH_TWITTER
-    elif xbmcplugin.getSetting(handle, "account_type") == "Facebook":
-        auth_type = GOMtv.AUTH_FACEBOOK
-    if not setting_defined("username") or not setting_defined("password"):
+    AUTH_TYPES = { "Twitter": GOMtv.AUTH_TWITTER, "Facebook": GOMtv.AUTH_FACEBOOK }
+    auth_type = AUTH_TYPES.get(get_setting("account_type"), GOMtv.AUTH_GOMTV)
+    username, password = get_setting("username"), get_setting("password")
+    if not username or not password:
         xbmcgui.Dialog().ok("Missing configuration", "you need to configure a username and password")
         return False
-    elif not g.login(xbmcplugin.getSetting(handle, "username"), xbmcplugin.getSetting(handle, "password"), auth_type) == GOMtv.LOGIN_SUCCESS:
+    elif not g.login(username, password, auth_type) == GOMtv.LOGIN_SUCCESS:
         xbmcgui.Dialog().ok("Login failed", "login failed")
         return False
-    return True
+    else:
+        return True
 
 def genCallback(func,**params):
     url = "%s?method=%s" % (sys.argv[0], func.__name__)
