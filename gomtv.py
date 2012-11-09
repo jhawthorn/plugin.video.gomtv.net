@@ -25,9 +25,6 @@ class GOMtv(object):
     VODLIST_TYPE_CODE_A = 16
     VODLIST_TYPE_UP_DOWN = 64
 
-    # ugly hack, doesnt work anymore
-    # CURRENT_LEAGUE = "videos"
-
     AUTH_GOMTV = 1
     AUTH_TWITTER = 2
     AUTH_FACEBOOK = 3
@@ -43,6 +40,9 @@ class GOMtv(object):
         if (os.path.isfile(cookie_path) and os.path.getsize(cookie_path) > 0):
             self.cookie_jar.load(cookie_path,True)
 
+        opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(self.cookie_jar))
+        urllib2.install_opener(opener)
+
     def _request(self, url, data=None, headers={}):
         # Ugly hack required to fix cookie names.
         # Guessing there's some javascript somewhere on that mess of a website
@@ -51,7 +51,6 @@ class GOMtv(object):
             if cookie.name.startswith("SES_"):
                 cookie.name = cookie.name.upper()
 
-        urllib2.install_opener(urllib2.build_opener(urllib2.HTTPCookieProcessor(self.cookie_jar)))
         if data is not None:
             data = urllib.urlencode(data)
         req = urllib2.Request(url, data, headers)

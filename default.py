@@ -28,9 +28,8 @@ def login():
 
 def genCallback(func,**params):
     url = "%s?method=%s" % (sys.argv[0], func.__name__)
-    if len(params.items()) > 0:
-        for (k,v) in params.items():
-            url = url + "&%s=%s" % (urllib.quote_plus(k), urllib.quote_plus(str(v)))
+    for (k,v) in params.items():
+        url = url + "&%s=%s" % (urllib.quote_plus(k), urllib.quote_plus(str(v)))
     return url
 
 def build_listItem(name):
