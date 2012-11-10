@@ -6,8 +6,8 @@ class NotLoggedInException(Exception):
     pass
 
 class NoBroadcastException(Exception):
-    def __init__(self, msg):
-        self.msg = msg
+    def msg(self):
+        self.args[0]
 
 class GOMtv(object):
     VODLIST_ORDER_MOST_RECENT = 1

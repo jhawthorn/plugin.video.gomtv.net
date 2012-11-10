@@ -92,7 +92,7 @@ def show_live():
             addLink(k, v, "")
         return True
     except NoBroadcastException, nbe:
-        xbmcgui.Dialog().ok("No live broadcast", nbe.msg)
+        xbmcgui.Dialog().ok("No live broadcast", nbe.msg())
 
 def list_leagues():
     g = gomtv()
