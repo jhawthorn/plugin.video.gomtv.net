@@ -240,11 +240,10 @@ class GOMtv(object):
         def format_unit(val, name):
             if val == 0:
                 return ""
+            elif val == 1:
+                return "%d %s, " % (val, name)
             else:
-                if val == 1:
-                    return "%d %ss, " % (val, name)
-                else:
-                    return "%d %s, " % (val, name)
+                return "%d %ss, " % (val, name)
         return "%s%s%s%s" % (format_unit(days, 'day'),
                              format_unit(hours, 'hour'),
                              format_unit(minutes, 'minute'),
