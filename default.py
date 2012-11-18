@@ -36,14 +36,15 @@ def genCallback(func,**params):
 def build_listItem(name):
     li = xbmcgui.ListItem(name)
     li.setInfo( type="Video", infoLabels={ "Title": name } )
-    li.setProperty('mimetype', 'video/x-flv')
+    li.setProperty('IsPlayable', 'true');
     return li
 
 def playVod(name,url,quality):
     g = gomtv()
     url = g.get_vod_set_url(url, quality)
-    li = build_listItem(name)
-    xbmc.Player( xbmc.PLAYER_CORE_AUTO ).play(url, li, False)
+    li = xbmcgui.ListItem(path=url)
+    li.setProperty('mimetype', 'video/x-flv')
+    xbmcplugin.setResolvedUrl(handle=handle, succeeded=True, listitem=li)
 
 def addLink(name, url, iconimage):
     xbmc.log("adding link: %s -> %s" % (name, url), xbmc.LOGDEBUG)
