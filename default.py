@@ -29,7 +29,8 @@ def login():
 def genCallback(func,**params):
     url = "%s?method=%s" % (sys.argv[0], func.__name__)
     for (k,v) in params.items():
-        url = url + "&%s=%s" % (urllib.quote_plus(k), urllib.quote_plus(str(v)))
+        if v is not None:
+            url = url + "&%s=%s" % (urllib.quote_plus(k), urllib.quote_plus(str(v)))
     return url
 
 def build_listItem(name):
@@ -101,10 +102,7 @@ def list_leagues():
         addDir(league["name"], league["logo"], list_main, league=league["id"])
     return True
 
-def list_vods(order, page, league):
-    # ugh.. xbmc?!
-    if league == "None":
-        league = None
+def list_vods(order, page, league=None):
     g = gomtv()
     result = g.get_vod_list(int(order), int(page), league)
     for vod in result["vods"]:
