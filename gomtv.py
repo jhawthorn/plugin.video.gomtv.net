@@ -140,28 +140,16 @@ class GOMtv(object):
                            "name": league.find("strong").find(text=True)})
         return result
 
-    def get_most_recent_list(self):
-        url = "http://www.gomtv.net/videos/index.gom"
-        soup = BeautifulSoup(self._request(url))
-        thumb_links = soup.findAll("td", {"class": "vod_info"})
-        vods = []
-        result = {"order": self.VODLIST_ORDER_MOST_RECENT,
-                  "page": 1,
-                  "vods": vods,
-                  "has_previous": False,
-                  "has_next": False}
-        for thumb_link in thumb_links:
-            href = thumb_link.find("a", "vod_link")["href"].replace("/./", "/")
-            thumb = thumb_link.find("img", "v_thumb")
-            vods.append({"url": "http://www.gomtv.net%s" % href, "preview": thumb["src"], "title": thumb["alt"]})
-        return result
+    def get_most_recent_list(self, page=1):
+        return self.get_vod_list(league=None, page=page)
 
     def get_vod_list(self, order=1, page=1, league=None, type=VODLIST_TYPE_ALL):
         if league is None:
-            return self.get_most_recent_list()
-        url = "http://www.gomtv.net/%s/vod/index.gom?page=%d&order=%d&ltype=%d" % (league, page, order, type)
+            url = "http://www.gomtv.net/videos/index.gom?page=%d" % (page)
+        else:
+            url = "http://www.gomtv.net/%s/vod/index.gom?page=%d&order=%d&ltype=%d" % (league, page, order, type)
         soup = BeautifulSoup(self._request(url))
-        thumb_links = soup.findAll("td", {"class": "listOff"})
+        thumb_links = soup.findAll("td", {"class": ["vod_info", "listOff"]})
         nums = soup.findAll("a", "num", href=re.compile("page=[0-9]+"))
         if len(nums) > 0:
             last = int(re.search("page=([0-9]+)",
@@ -177,10 +165,9 @@ class GOMtv(object):
         if page > last or page < 1:
             return result
         for thumb_link in thumb_links:
-            href = thumb_link.find("a", "vodlink")["href"].replace("/./", "/")
-            vods.append({"url": "http://www.gomtv.net%s" % href,
-                           "preview": thumb_link.find("img", "vodthumb")["src"],
-                           "title": thumb_link.find("a", "thumb_link")["title"]})
+            href = thumb_link.find("a", {'class': ["vod_link", "vodlink"]})["href"].replace("/./", "/")
+            thumb = thumb_link.find("img", {'class': ["v_thumb", "vodthumb"]})
+            vods.append({"url": "http://www.gomtv.net%s" % href, "preview": thumb["src"], "title": thumb["alt"]})
         return result
 
     def _get_set_info(self, leagueid, vjoinid, quality, conid):
