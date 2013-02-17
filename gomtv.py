@@ -1,4 +1,4 @@
-import urllib, urllib2, re, cookielib, socket, os, tempfile
+import urllib, urllib2, re, cookielib, socket, os, tempfile, json, md5
 from BeautifulSoup import BeautifulSoup
 import proxy
 
@@ -28,7 +28,7 @@ class GOMtv(object):
     AUTH_GOMTV = 1
     AUTH_TWITTER = 2
     AUTH_FACEBOOK = 3
-    
+
     def __init__(self, cookie_path=None, use_proxy=False):
         self.use_proxy = use_proxy
         self.vod_sets = {}
@@ -55,14 +55,17 @@ class GOMtv(object):
         #print "response:\n%s" % ret
         return ret
 
-    def _get_stream_key(self, server_ip, uno, nodeid, local_ip):
+    def _get_stream_key(self, server_ip, params):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((server_ip, 63800))
-        payload = "Login,0,%s,%s,%s\n" % (uno, nodeid, local_ip)
+        payload = "Login,0,%s,%s,%s\n" % (params['uno'], server_ip, params['uip'])
         s.send(payload)
         data = s.recv(1024)
         s.close()
         return data[data.rfind(",")+1:-1]
+
+    def _get_ip(self):
+        return self._request('http://www.gomtv.net/webPlayer/getIP.gom')
 
     def set_cookie(self, name, value):
         exp = time() + 24 * 60 * 60
@@ -71,7 +74,7 @@ class GOMtv(object):
                                   path='/', path_specified=True, secure=False, expires=exp,
                                   discard=False, comment=None, comment_url=None, rest={})
         self.cookie_jar.set_cookie(cookie)
-        
+
 
     def login(self, username, password, auth_type=AUTH_GOMTV):
         self.cookie_jar.clear_session_cookies()
@@ -81,7 +84,7 @@ class GOMtv(object):
                                                                                "cmd": "login",
                                                                                "rememberme": "1"})
             return int(ret)
-        
+
         elif auth_type == self.AUTH_TWITTER:
             data = self._request("http://www.gomtv.net/twitter/redirect.gom?burl=/index.gom")
             location = re.search("document.location.replace\(\"(.*)\"\)", data).group(1)
@@ -108,7 +111,7 @@ class GOMtv(object):
                 location = refresh.group(1)
                 data = self._request(location)
                 return self.LOGIN_SUCCESS
-            
+
         elif auth_type == self.AUTH_FACEBOOK:
             data = self._request("http://www.gomtv.net/facebook/index.gom?burl=/index.gom")
             soup = BeautifulSoup(data)
@@ -170,55 +173,48 @@ class GOMtv(object):
             vods.append({"url": "http://www.gomtv.net%s" % href, "preview": thumb["src"], "title": thumb["alt"]})
         return result
 
-    def _get_set_info(self, leagueid, vjoinid, quality, conid):
-        vod_key = (leagueid, vjoinid, quality, conid)
-
-        if vod_key not in self.vod_sets:
-            url = "http://www.gomtv.net/gox/ggox.gom?&target=vod&leagueid=%s&vjoinid=%s&strLevel=%s&conid=%s" % vod_key
-            r = self._request(url)
-            if "ErrorMessage" in r:
-                return None, None
-            
-            urls = re.findall("href=\"(.*)\"", r)
-            for url in urls:
-                url = url.replace("&amp;", "&")
-                url_vjoinid = re.search("vjoinid=([0-9]+)",url).group(1)
-                url_vod_key = (leagueid, url_vjoinid, quality, conid)
-                uno = re.search("uno=([0-9]+)", url).group(1)
-                nodeid = re.search("nodeid=([0-9]+)", url).group(1)
-                ip = re.search("USERIP>([0-9.]+)", r).group(1)
-                remote_ip = re.search("//([0-9.]+)/", url).group(1)
-
-                self.vod_sets[url_vod_key] = (url, (remote_ip, uno, nodeid, ip))
-        if self.use_proxy:
-          url, (remote_ip, uno, nodeid, ip) = self.vod_sets.pop(vod_key)
-          return proxy.url({'payload': "Login,0,%s,%s,%s\n" % (uno, nodeid, ip),'dest': url})
-        else:
-          url, (remote_ip, uno, nodeid, ip) = self.vod_sets[vod_key]
-          key = self._get_stream_key(remote_ip, uno, nodeid, ip)
-          return url + "&key=" + key
-
     def _get_set_params(self, body):
-        flashvars = re.search("FlashVars=\"([^\"]+)\"", body).group(1)
-        params = [v.split('=',1) for v in flashvars.split("&")]
-        params = [(key, urllib.unquote_plus(urllib.unquote(value))) for (key, value) in params]
-        return dict(params)
-        
+        flashvars = re.search('flashvars\s+=\s+([^;]+);', body).group(1)
+        return json.loads(flashvars)
+
+    def extract_jsonData(self, body):
+        jsondata = re.search('var\s+jsonData\s+=\s+eval\s+\(([^)]*)\)', body).group(1)
+        return json.loads(jsondata)
+
     def get_vod_set(self, vod_url, quality="HQ"):
-        r = self._request(vod_url + "/?set=%d" % (1))
+        r = self._request(vod_url)
+
+        flashvars = self._get_set_params(r)
+        # 0 english, 1 korean
+        jsondata = self.extract_jsonData(r)[0]
         soup = BeautifulSoup(r)
+        vodlist = soup.find('ul', id='vodList')
 
-        sets = soup.findAll("li", "li_set")
-        for (i, s) in enumerate(sets, 1):
-            yield {"url": vod_url + "/?set=%d" % i,
-                    "title": "%i - Game %s" % (i, s.text)}
+        sets = vodlist.findAll("a")
+        for (i, s) in enumerate(sets):
+            params = dict(flashvars, **jsondata[i])
+            yield {"params": params,
+                    "title": "%i - %s" % (i+1, s['title'])}
 
-    def get_vod_set_url(self, set_url, quality="HQ"):
-        r = self._request(set_url)
-        params = self._get_set_params(r)
-        url = self._get_set_info(params["leagueid"], params["vjoinid"], quality, params["conid"])
-        return url
+    def _gox_params(self, params):
+        params["adstate"] = "0"
+        params["goxkey"] = "qoaEl"
+        params["uip"] = self._get_ip()
 
+        keys = ["leagueid", "conid", "goxkey", "level", "uno", "uip", "adstate", "vjoinid", "nid"]
+        hashstr = "".join([params[key] for key in keys])
+        params['goxkey'] = md5.new(hashstr).hexdigest()
+        return params
+
+    def get_vod_set_url(self, params, quality="HQ"):
+        params = self._gox_params(params)
+        r = self._request('http://gox.gomtv.net/cgi-bin/gox_vod_sfile.cgi', params)
+        url = re.search('<REF\s+href="(.+)"\s+reftype="vod"', r).group(1)
+        url = url.replace('&amp;', '&')
+
+        remote_ip = re.search("//([0-9.]+)/", url).group(1)
+        stream_key = self._get_stream_key(remote_ip, params)
+        return url + "&key=" + stream_key
 
     def seconds2time(self, seconds):
         days, rest = divmod(seconds, 86400)
@@ -236,7 +232,7 @@ class GOMtv(object):
                              format_unit(minutes, 'minute'),
                              ("%d seconds" % rest))
 
-    
+
     def live(self, quality):
         data = self._request("http://www.gomtv.net/main/goLive.gom")
         soup = BeautifulSoup(data)
