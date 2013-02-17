@@ -1,4 +1,3 @@
--*- markdown -*-
 
 About
 ====================
@@ -6,8 +5,9 @@ This is a video addon for gomtv.net for xbmc.
 
 Features
 ====================
-* Browsing of Most recent/Most viewed/Most commented vods
-* Playback of vods
+* VOD playback
+* VOD quality selection EHQ/HQ/SQ
+* Browsing by most recent/most viewed/most commented
 
 Installing
 ====================
