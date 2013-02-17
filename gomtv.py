@@ -85,12 +85,15 @@ class GOMtv(object):
     def login(self, username, password, auth_type=AUTH_GOMTV):
         self.cookie_jar.clear_session_cookies()
         if auth_type == self.AUTH_GOMTV:
-            ret = self._request("http://www.gomtv.net/user/loginProcess.gom", {"mb_username": username,
-                                                                               "mb_password": password,
-                                                                               "cmd": "login",
-                                                                               "rememberme": "1"})
-            return int(ret)
-
+            form = {
+                    "mb_username": username,
+                    "mb_password": password,
+                    "cmd": "login",
+                    "rememberme": "1"
+                    }
+            ret = self._request("http://www.gomtv.net/user/loginProcess.gom", form, {'Referer': 'http://www.gomtv.net/'})
+            # FIXME
+            return self.LOGIN_SUCCESS
         elif auth_type == self.AUTH_TWITTER:
             data = self._request("http://www.gomtv.net/twitter/redirect.gom?burl=/index.gom")
             location = re.search("document.location.replace\(\"(.*)\"\)", data).group(1)
