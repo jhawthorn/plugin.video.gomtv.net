@@ -166,7 +166,7 @@ class GOMtv(object):
         if league is None:
             url = "http://www.gomtv.net/videos/index.gom?page=%d" % (page)
         else:
-            url = "http://www.gomtv.net/%s/vod/index.gom?page=%d&order=%d&ltype=%d" % (league, page, order, type)
+            url = "http://www.gomtv.net/%s/vod/?page=%d&order=%d&ltype=%d" % (league, page, order, type)
         soup = BeautifulSoup(self._request(url))
         thumb_links = soup.findAll("td", {"class": ["vod_info", "listOff"]})
         nums = soup.findAll("a", "num", href=re.compile("page=[0-9]+"))
