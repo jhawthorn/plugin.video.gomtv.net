@@ -29,6 +29,12 @@ class GOMtv(object):
     AUTH_TWITTER = 2
     AUTH_FACEBOOK = 3
 
+    LEVELS = {
+            'EHQ': [65, 60, 6, 5],
+            'HQ': [60, 6, 5],
+            'SQ': [6, 5]
+            }
+
     def __init__(self, cookie_path=None, use_proxy=False):
         self.use_proxy = use_proxy
         self.vod_sets = {}
@@ -206,15 +212,22 @@ class GOMtv(object):
         params['goxkey'] = md5.new(hashstr).hexdigest()
         return params
 
-    def get_vod_set_url(self, params, quality="HQ"):
+    def _get_url(self, params):
         params = self._gox_params(params)
         r = self._request('http://gox.gomtv.net/cgi-bin/gox_vod_sfile.cgi', params)
-        url = re.search('<REF\s+href="(.+)"\s+reftype="vod"', r).group(1)
-        url = url.replace('&amp;', '&')
+        match = re.search('<REF\s+href="(.+)"\s+reftype="vod"', r)
+        if match:
+            url = match.group(1).replace('&amp;', '&')
+            remote_ip = re.search("//([0-9.]+)/", url).group(1)
+            stream_key = self._get_stream_key(remote_ip, params)
+            return url + "&key=" + stream_key
 
-        remote_ip = re.search("//([0-9.]+)/", url).group(1)
-        stream_key = self._get_stream_key(remote_ip, params)
-        return url + "&key=" + stream_key
+    def get_vod_set_url(self, params, quality="EHQ"):
+        for level in self.LEVELS[quality]:
+            params['level'] = str(level)
+            url = self._get_url(params)
+            if url:
+                return url
 
     def seconds2time(self, seconds):
         days, rest = divmod(seconds, 86400)
