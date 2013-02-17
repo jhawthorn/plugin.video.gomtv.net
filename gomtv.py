@@ -214,7 +214,7 @@ class GOMtv(object):
         r = self._request('http://gox.gomtv.net/cgi-bin/gox_vod_sfile.cgi', params)
         match = re.search('<REF\s+href="(.+)"\s+reftype="vod"', r)
         if match:
-            url = match.group(1).replace('&amp;', '&')
+            url = match.group(1).replace('&amp;', '&').replace(' ', '%20')
             remote_ip = re.search("//([0-9.]+)/", url).group(1)
             stream_key = self._get_stream_key(remote_ip, params)
             return url + "&key=" + stream_key
