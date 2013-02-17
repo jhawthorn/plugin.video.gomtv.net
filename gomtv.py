@@ -212,6 +212,14 @@ class GOMtv(object):
             yield {"params": params,
                     "title": "%i - %s" % (i+1, s['title'])}
 
+    def _key_or_proxy(self, url, params):
+        remote_ip = re.search("//([0-9.]+)/", url).group(1)
+        if self.use_proxy:
+            return proxy.url({'payload': "Login,0,%s,%s,%s\n" % (params['uno'], remote_ip, params['uip']), 'dest': url})
+        else:
+            stream_key = self._get_stream_key(remote_ip, params)
+            return url + "&key=" + stream_key
+
     def _gox_params(self, params):
         params["goxkey"] = "qoaEl"
         keys = ["leagueid", "conid", "goxkey", "level", "uno", "uip", "adstate", "vjoinid", "nid"]
@@ -225,9 +233,7 @@ class GOMtv(object):
         match = re.search('<REF\s+href="(.+)"\s+reftype="vod"', r)
         if match:
             url = match.group(1).replace('&amp;', '&').replace(' ', '%20')
-            remote_ip = re.search("//([0-9.]+)/", url).group(1)
-            stream_key = self._get_stream_key(remote_ip, params)
-            return url + "&key=" + stream_key
+            return self._key_or_proxy(url, params)
 
     def get_vod_set_url(self, params, quality="EHQ"):
         params["uip"] = self._get_ip()
