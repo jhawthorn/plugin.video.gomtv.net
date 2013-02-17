@@ -203,10 +203,7 @@ class GOMtv(object):
                     "title": "%i - %s" % (i+1, s['title'])}
 
     def _gox_params(self, params):
-        params["adstate"] = "0"
         params["goxkey"] = "qoaEl"
-        params["uip"] = self._get_ip()
-
         keys = ["leagueid", "conid", "goxkey", "level", "uno", "uip", "adstate", "vjoinid", "nid"]
         hashstr = "".join([params[key] for key in keys])
         params['goxkey'] = md5.new(hashstr).hexdigest()
@@ -223,6 +220,8 @@ class GOMtv(object):
             return url + "&key=" + stream_key
 
     def get_vod_set_url(self, params, quality="EHQ"):
+        params["uip"] = self._get_ip()
+        params["adstate"] = "0"
         for level in self.LEVELS[quality]:
             params['level'] = str(level)
             url = self._get_url(params)
