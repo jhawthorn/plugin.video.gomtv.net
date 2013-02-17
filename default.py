@@ -43,7 +43,7 @@ def playVod(**params):
     g = gomtv()
     url = g.get_vod_set_url(params, get_quality())
     li = xbmcgui.ListItem(path=url)
-    li.setProperty('mimetype', 'video/x-flv')
+    li.setProperty('mimetype', 'video/mp4')
     xbmcplugin.setResolvedUrl(handle=handle, succeeded=True, listitem=li)
 
 def addLink(name, url, iconimage):
