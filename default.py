@@ -18,7 +18,7 @@ def login():
     auth_type = AUTH_TYPES.get(get_setting("account_type"), GOMtv.AUTH_GOMTV)
     username, password = get_setting("username"), get_setting("password")
     if not username or not password:
-        xbmcgui.Dialog().ok("Missing configuration", "you need to configure a username and password")
+        addon.openSettings()
         return False
     elif not g.login(username, password, auth_type) == GOMtv.LOGIN_SUCCESS:
         xbmcgui.Dialog().ok("Login failed", "login failed")
