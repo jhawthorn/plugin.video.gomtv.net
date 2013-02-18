@@ -1,0 +1,27 @@
+
+[B]0.0.8[/B]
+Fixed: Fixes for GOMtv 2013 changes.
+Added: Support for new "Enhanced High Quality" VODs
+
+[B]0.0.7[/B]
+Added: Ability to seek in stream
+
+[B]0.0.6[/B]
+Fixed: Incorrect handling of None
+Fixed: vod lists where there's only one page
+
+[B]0.0.5.1[/B]
+Fixed: Scraping with GOMtv changes
+
+[B]0.0.5[/B]
+Fixed: Matches other than first in each set
+Fixed: Scraping with GOMtv changes
+
+[B]0.0.4[/B]
+Added: Option for displaying races
+
+[B]0.0.3[/B]
+Added: Facebook login
+Added: Twitter login
+Added: Browsing by league
+
