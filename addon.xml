@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="plugin.video.gomtv.net"
        name="GOMtv.net"
-       version="0.0.7.0"
-       provider-name="Henrik Olsson &lt;henrik@fixme.se&gt;">
+       version="0.0.8"
+       provider-name="John Hawthorn">
   <requires>
     <import addon="xbmc.python" version="2.0"/>
     <import addon="script.module.simplejson" version="2.0.10"/>
@@ -18,6 +18,8 @@
     <summary lang="en">GOMtv.net</summary>
     <description lang="en">GOMtv.net video plugin</description>
     <platform>all</platform>
-    <license>GPL 2.0</license>    
+    <license>GPL 2.0</license>
+    <source>https://github.com/jhawthorn/plugin.video.gomtv.net</source>
+    <email>john.hawthorn@gmail.com</email>
   </extension>
 </addon>
