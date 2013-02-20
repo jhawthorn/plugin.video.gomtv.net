@@ -1,6 +1,7 @@
-import urllib, urllib2, re, cookielib, socket, os, tempfile, json, md5
+import urllib, urllib2, re, cookielib, os, tempfile, json, md5
 from BeautifulSoup import BeautifulSoup
 import proxy
+from gomutil import *
 
 class NotLoggedInException(Exception):
     pass
@@ -62,15 +63,6 @@ class GOMtv(object):
         #print "url: %s" % url
         #print "response:\n%s" % ret
         return ret
-
-    def _get_stream_key(self, server_ip, params):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((server_ip, 63800))
-        payload = "Login,0,%s,%s,%s\n" % (params['uno'], server_ip, params['uip'])
-        s.send(payload)
-        data = s.recv(1024)
-        s.close()
-        return data[data.rfind(",")+1:-1]
 
     def _get_ip(self):
         return self._request('http://www.gomtv.net/webPlayer/getIP.gom')
@@ -209,11 +201,11 @@ class GOMtv(object):
 
     def _key_or_proxy(self, url, params):
         remote_ip = re.search("//([0-9.]+)/", url).group(1)
+        payload = gom_key_payload(remote_ip, params)
         if self.use_proxy:
-            return proxy.url({'payload': "Login,0,%s,%s,%s\n" % (params['uno'], remote_ip, params['uip']), 'dest': url})
+            return proxy.url(url, payload)
         else:
-            stream_key = self._get_stream_key(remote_ip, params)
-            return url + "&key=" + stream_key
+            return "%s&key=%s" % (url, gom_stream_key(remote_ip, payload))
 
     def _gox_params(self, params):
         params["goxkey"] = "qoaEl"

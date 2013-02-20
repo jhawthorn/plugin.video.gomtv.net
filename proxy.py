@@ -1,7 +1,8 @@
 #!/usr/bin/env python2
 import asyncore, sys, time, re, urllib, ConfigParser, threading, time
-from socket import *
-from urlparse import urlparse,parse_qs
+import socket
+from urlparse import urlparse,parse_qsl
+from gomutil import *
 
 try:
   import xbmc
@@ -54,10 +55,7 @@ class HTTPRequest:
 
   @property
   def resource(self):
-    try:
-      query =  urllib.urlencode([(k,v) for k in self.query.keys() for v in self.query[k]])
-    except (AttributeError, TypeError):
-      query = self.query
+    query = urllib.urlencode(self.query)
 
     if len(query) > 0:
       query = '?' + query
@@ -78,7 +76,6 @@ class HTTPRequest:
   def host(self,new_host):
     self.headers = re.sub(r'(^|\r\n)Host: .*', '\1Host: '+new_host,self.headers)
 
-
   @staticmethod
   def parse(request):
     getmatch = re.match(r'([A-Z]+) (.+?) HTTP/1\..\r\n(.*)',request, re.DOTALL)
@@ -88,7 +85,7 @@ class HTTPRequest:
       url = urlparse(getmatch.group(2))
       return HTTPRequest(verb=getmatch.group(1) \
           ,path=url.path \
-          ,query=parse_qs(url.query) \
+          ,query=dict(parse_qsl(url.query)) \
           ,headers=getmatch.group(3))
 
 
@@ -138,7 +135,7 @@ class ProxyConnection(asyncore.dispatcher):
         # a read condition, and having recv() return 0.
         self.handle_close()
       return bytes
-    except error, why:
+    except socket.error, why:
       # winsock sometimes throws ENOTCONN
         if why.args[0] in asyncore._DISCONNECTED:
           self.handle_close()
@@ -146,29 +143,20 @@ class ProxyConnection(asyncore.dispatcher):
         else:
           raise
 
-
   @staticmethod
   def process_request(request):
     if request.verb != 'GET':
       return False
-    
-    url = urlparse(request.query['dest'][0])
 
-    authsock = socket(AF_INET, SOCK_STREAM)
-    authsock.connect((url.netloc, 63800))
-    authsock.send(request.query['payload'][0])
-    authdata = authsock.recv(1024)
-    key = authdata[authdata.rfind(",")+1:-1]
-    authsock.close()
-     
-    query = "%s&key=%s" % (url.query,key)
+    remote_ip = request.query.pop('remote_ip')
+    payload = request.query.pop('payload')
     drange = re.match(r'Range: bytes=(\d+)-',request.headers)
-    if drange != None:
-      query += '&startpos=' + drange.group(1)
 
-    request.host = url.netloc
-    request.path = url.path
-    request.query = query
+    request.host = remote_ip
+    request.query['key'] = gom_stream_key(request.host, payload)
+    if drange != None:
+      request.query['startpos='] = drange.group(1)
+
     log("Proxying to %s" % request.url)
     return True
 
@@ -190,7 +178,7 @@ class ProxyConnection(asyncore.dispatcher):
         buf_size = int(float(addon.getSetting('seek_buffer_size'))) << 20
       else:
         buf_size = BUFFER_SIZE
-      conn = ProxyConnection(sock,socket(AF_INET, SOCK_STREAM),buffer_size=1<<20,sink_buffer_size=buf_size)
+      conn = ProxyConnection(sock,socket.socket(socket.AF_INET, socket.SOCK_STREAM),buffer_size=1<<20,sink_buffer_size=buf_size)
       conn.sink.connect((request.host, 80))
       conn.sink.send(request.http_format())
       conn.sink.send(initial_data)
@@ -199,8 +187,8 @@ class ProxyConnection(asyncore.dispatcher):
 class ProxyServer(asyncore.dispatcher):
   def __init__(self):
     asyncore.dispatcher.__init__(self)
-    self.create_socket( AF_INET, SOCK_STREAM )
-    self.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1) 
+    self.create_socket( socket.AF_INET, socket.SOCK_STREAM )
+    self.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     bound = False
     port = START_PORT
 
@@ -210,7 +198,7 @@ class ProxyServer(asyncore.dispatcher):
         self.bind(( 'localhost', port ))
         self.listen(5)
         bound = True
-      except (gaierror, error):
+      except (socket.gaierror, socket.error):
         port += 1
         if port > START_PORT + 100:
           raise
@@ -222,7 +210,7 @@ class ProxyServer(asyncore.dispatcher):
     newsock, address = self.accept()
     ProxyConnection.setup(newsock)
 
-def url(params = None):
+def url(dest, payload):
 
   if IN_XBMC:
     port_path = xbmc.translatePath('special://temp/gomtv_proxy.txt')
@@ -232,12 +220,11 @@ def url(params = None):
   else:
     port = START_PORT
 
-  if params == None:
-    query = ''
-  else:
-    query = '?' + urllib.urlencode(params)
+  remote_ip = re.search(r'//([0-9.]+)/', dest).group(1)
+  dest = dest.replace(remote_ip, 'localhost:%s' % port)
+  dest += '&remote_ip=%s&payload=%s' % (remote_ip, payload)
 
-  return "http://localhost:%s/%s" % (port,query)
+  return dest
 
 if __name__=="__main__":
   try:
