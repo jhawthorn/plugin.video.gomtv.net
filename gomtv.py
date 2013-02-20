@@ -46,8 +46,7 @@ class GOMtv(object):
         if (os.path.isfile(cookie_path) and os.path.getsize(cookie_path) > 0):
             self.cookie_jar.load(cookie_path,True)
 
-        opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(self.cookie_jar))
-        urllib2.install_opener(opener)
+        self.opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(self.cookie_jar))
 
     def _request(self, url, data=None, headers={}):
         # Ugly hack required to fix cookie names.
@@ -60,7 +59,7 @@ class GOMtv(object):
         if data is not None:
             data = urllib.urlencode(data)
         req = urllib2.Request(url, data, headers)
-        response = urllib2.urlopen(req)
+        response = self.opener.open(req)
         ret = response.read()
         response.close()
         self.cookie_jar.save(None,True)
