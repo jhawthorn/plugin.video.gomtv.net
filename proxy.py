@@ -1,5 +1,6 @@
 #!/usr/bin/env python2
-import asyncore, sys, time, re, urllib, ConfigParser, threading, time
+import asyncore, asynchat
+import re, urllib, ConfigParser
 import socket
 from urlparse import urlparse,parse_qsl
 from gomutil import *
@@ -18,33 +19,7 @@ def log(msg):
   else:
     print msg
 
-BLOCK_SIZE=1024 * 8
 START_PORT=38234
-BUFFER_SIZE=1024 * 1024 * 2
-
-class Buffer:
-  def __init__(self,size):
-    self.data = bytearray(size)
-    self.buf = memoryview(self.data)
-    self.used = 0
-
-  def size(self):
-    return self.used
-
-  def in_buffer(self):
-    return self.buf[self.used:]
-
-  def out_buffer(self):
-    return self.buf[:self.used]
-
-  def grow(self,amount):
-    self.used += amount
-
-  def discard(self,amount):
-    if self.used > amount:
-      rest = self.buf[amount:self.used]
-      self.buf[:len(rest)] = rest
-    self.used -= amount
 
 class HTTPRequest:
   def __init__(self,verb,path,query,headers):
@@ -88,65 +63,22 @@ class HTTPRequest:
           ,query=dict(parse_qsl(url.query)) \
           ,headers=getmatch.group(3))
 
+class gom_proxy(asynchat.async_chat):
+    def __init__(self, sink, request):
+        self.sink = sink
+        self.set_terminator(None)
 
+        self.source = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.source.connect((request.host, 80))
+        self.source.send(request.http_format())
+        asynchat.async_chat.__init__(self, sock=self.source)
 
-class ProxyConnection(asyncore.dispatcher):
-  def __init__(self,sock,sink,buffer_size=BUFFER_SIZE,sink_buffer_size=BUFFER_SIZE):
-    asyncore.dispatcher.__init__(self,sock)
-    log("Creating %d byte buffer" % buffer_size)
-    self._buf = Buffer(buffer_size)
-    self.closed = False
-    if isinstance(sink,ProxyConnection):
-      self.sink = sink
-    else:
-      self.sink = ProxyConnection(sink,self,buffer_size=sink_buffer_size)
+    def collect_incoming_data(self, data):
+        self.sink.push(data)
 
-  def handle_write(self):
-    if len(self._buf.out_buffer()) > 0:
-      sent = 0
-      sent = asyncore.dispatcher.send(self,self._buf.out_buffer())
-      self._buf.discard(sent)
-
-  def handle_read(self):
-    read = 0
-    read = self.recv_into(self.sink._buf.in_buffer())
-    if read > 0:
-      self.sink._buf.grow(read)
-
-  def handle_close(self):
-    self.close()
-    self.sink.close()
-
-  def send(self,data):
-    self._buf.in_buffer()[:len(data)] = data
-    self._buf.grow(len(data))
-
-  def writable(self):
-    return (not self.connected) or (len(self._buf.out_buffer()) != 0)
-
-  def readable(self):
-    return len(self.sink._buf.in_buffer()) != 0
-
-  def recv_into(self, *args):
-    try:
-      bytes = self.socket.recv_into(*args)
-      if bytes == 0:
-        # a closed connection is indicated by signaling
-        # a read condition, and having recv() return 0.
-        self.handle_close()
-      return bytes
-    except socket.error, why:
-      # winsock sometimes throws ENOTCONN
-        if why.args[0] in asyncore._DISCONNECTED:
-          self.handle_close()
-          return 0
-        else:
-          raise
-
-  @staticmethod
-  def process_request(request):
+def translate_request(request):
     if request.verb != 'GET':
-      return False
+        return False
 
     remote_ip = request.query.pop('remote_ip')
     payload = request.query.pop('payload')
@@ -155,63 +87,49 @@ class ProxyConnection(asyncore.dispatcher):
     request.host = remote_ip
     request.query['key'] = gom_stream_key(request.host, payload)
     if drange != None:
-      request.query['startpos='] = drange.group(1)
+        request.query['startpos='] = drange.group(1)
 
-    log("Proxying to %s" % request.url)
-    return True
+class http_request_handler(asynchat.async_chat):
+    def __init__(self, sock):
+        asynchat.async_chat.__init__(self, sock=sock)
+        self.ibuffer = []
+        self.set_terminator("\r\n\r\n")
 
-  @staticmethod
-  def setup(sock):
-    data = ''
-    while data.find("\r\n\r\n") == -1:
-      data += sock.recv(BLOCK_SIZE)
+    def collect_incoming_data(self, data):
+        self.ibuffer.append(data)
 
-    eoh = data.find("\r\n\r\n") + 2
-    request = HTTPRequest.parse(data[:eoh])
-    initial_data = data[(eoh+2):]
-
-    if not ProxyConnection.process_request(request):
-      sock.close
-      return None
-    else:
-      if IN_XBMC:
-        buf_size = int(float(addon.getSetting('seek_buffer_size'))) << 20
-      else:
-        buf_size = BUFFER_SIZE
-      conn = ProxyConnection(sock,socket.socket(socket.AF_INET, socket.SOCK_STREAM),buffer_size=1<<20,sink_buffer_size=buf_size)
-      conn.sink.connect((request.host, 80))
-      conn.sink.send(request.http_format())
-      conn.sink.send(initial_data)
-      return conn
+    def found_terminator(self):
+        self.set_terminator(None)
+        headers = "".join(self.ibuffer) + "\r\n\r\n"
+        request = HTTPRequest.parse(headers)
+        translate_request(request)
+        gom_proxy(self, request)
 
 class ProxyServer(asyncore.dispatcher):
   def __init__(self):
     asyncore.dispatcher.__init__(self)
     self.create_socket( socket.AF_INET, socket.SOCK_STREAM )
-    self.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    bound = False
-    port = START_PORT
+    self.set_reuse_addr()
 
-    while (not bound):
+    for port in xrange(START_PORT, START_PORT+100):
       try:
         log("Trying port %d" % port)
         self.bind(( 'localhost', port ))
         self.listen(5)
-        bound = True
+        self.port = port
+        break
       except (socket.gaierror, socket.error):
         port += 1
-        if port > START_PORT + 100:
-          raise
-    self.port = port
+    else:
+      raise
 
     log("Bound to port %d" % self.port)
 
   def handle_accept(self):
     newsock, address = self.accept()
-    ProxyConnection.setup(newsock)
+    http_request_handler(newsock)
 
 def url(dest, payload):
-
   if IN_XBMC:
     port_path = xbmc.translatePath('special://temp/gomtv_proxy.txt')
     config = ConfigParser.SafeConfigParser()
