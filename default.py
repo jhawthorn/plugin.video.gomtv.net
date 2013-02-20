@@ -1,5 +1,5 @@
 import urllib, re, xbmcplugin, xbmcgui, os, xbmc, xbmcaddon
-from gomtv import GOMtv, NoBroadcastException, NotLoggedInException
+from gomtv import GOMtv, NotLoggedInException
 
 BASE_COOKIE_PATH = os.path.join(xbmc.translatePath( "special://profile/" ), "addon_data", "plugin.video.gomtv.net", 'cookie.txt')
 handle = int(sys.argv[1])
@@ -74,7 +74,6 @@ def list_main(league=None):
             addDir("Most commented", "", list_vods, page=1, order=GOMtv.VODLIST_ORDER_MOST_COMMENTED, league=league)
         # Kind of ugly 2!
         if league == None:
-            addDir("Live", "", show_live)
             addDir("Leagues", "", list_leagues)
         return True
     else:
@@ -82,16 +81,6 @@ def list_main(league=None):
 
 def get_quality():
     return get_setting("quality")
-
-def show_live():
-    g = gomtv()
-    try:
-        ls = g.live(get_quality())
-        for (k,v) in ls.items():
-            addLink(k, v, "")
-        return True
-    except NoBroadcastException, nbe:
-        xbmcgui.Dialog().ok("No live broadcast", nbe.msg())
 
 def list_leagues():
     g = gomtv()

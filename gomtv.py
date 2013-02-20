@@ -5,10 +5,6 @@ import proxy
 class NotLoggedInException(Exception):
     pass
 
-class NoBroadcastException(Exception):
-    def msg(self):
-        self.args[0]
-
 class GOMtv(object):
     VODLIST_ORDER_MOST_RECENT = 1
     VODLIST_ORDER_MOST_VIEWED = 2
@@ -243,59 +239,3 @@ class GOMtv(object):
             if url:
                 return url
 
-    def seconds2time(self, seconds):
-        days, rest = divmod(seconds, 86400)
-        hours, rest = divmod(rest, 3600)
-        minutes, rest = divmod(rest, 60)
-        def format_unit(val, name):
-            if val == 0:
-                return ""
-            elif val == 1:
-                return "%d %s, " % (val, name)
-            else:
-                return "%d %ss, " % (val, name)
-        return "%s%s%s%s" % (format_unit(days, 'day'),
-                             format_unit(hours, 'hour'),
-                             format_unit(minutes, 'minute'),
-                             ("%d seconds" % rest))
-
-
-    def live(self, quality):
-        data = self._request("http://www.gomtv.net/main/goLive.gom")
-        soup = BeautifulSoup(data)
-        left = int(re.search("var leftTime\s*=\s*'?(-?[0-9]+)'?", data).group(1));
-        if left > 0:
-            raise NoBroadcastException(("Next broadcast starts in: %s" % self.seconds2time(left)))
-
-
-        choices = []
-        for choice in soup.findAll("dl", "lcy_choiceset"):
-            choices.append({"desc": " ".join(choice.findAll("p", text=True)).replace("\n", "").strip(),
-                            "link": choice.find("a")["href"]})
-
-        result = {}
-        if len(choices) == 0:
-            gox = re.search('[^/]var goxUrl[^=]*=[^"]*"(.*);', data).group(1)
-            gox = gox.replace('" + playType + "', quality)
-            gox = gox.replace('"+ tmpThis.title +"&"', "title")
-            data = self._request(gox)
-            if data == "1001":
-                raise NotLoggedInException()
-            url = re.search('href="(.*)"', data).group(1)
-            if url.startswith("http"):
-                u = url.replace("&amp;", "&")
-                result["FIXME"] = u
-        for choice in choices:
-            data = self._request("http://www.gomtv.net%s" % choice["link"])
-            soup = BeautifulSoup(data)
-            gox = re.search('[^/]var goxUrl[^=]*=[^"]*"(.*);', data).group(1)
-            gox = gox.replace('" + playType + "', quality)
-            gox = gox.replace('"+ tmpThis.title +"&"', "title")
-            data = self._request(gox)
-            if data == "1001":
-                raise NotLoggedInException()
-            url = re.search('href="(.*)"', data).group(1)
-            if url.startswith("http"):
-                u = url.replace("&amp;", "&")
-                result[choice["desc"]] = u
-        return result
