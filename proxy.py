@@ -20,6 +20,7 @@ def log(msg):
         print msg
 
 START_PORT=38234
+BUFFER_SIZE=1024*1024*2
 
 class HTTPRequest:
     def __init__(self,verb,path,query,headers):
@@ -70,8 +71,10 @@ class gom_proxy(asynchat.async_chat):
 
         self.source = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.source.connect((request.host, 80))
-        self.source.send(request.http_format())
         asynchat.async_chat.__init__(self, sock=self.source)
+        self.ac_in_buffer_size = BUFFER_SIZE
+
+        self.push(request.http_format())
 
     def collect_incoming_data(self, data):
         self.sink.push(data)
@@ -92,6 +95,7 @@ def translate_request(request):
 class http_request_handler(asynchat.async_chat):
     def __init__(self, sock):
         asynchat.async_chat.__init__(self, sock=sock)
+        self.ac_out_buffer_size = BUFFER_SIZE
         self.ibuffer = []
         self.set_terminator("\r\n\r\n")
 
