@@ -11,12 +11,6 @@ class GOMtv(object):
     VODLIST_ORDER_MOST_VIEWED = 2
     VODLIST_ORDER_MOST_COMMENTED = 3
 
-    LOGIN_SUCCESS = 1
-    LOGIN_BAD_USERNAME_OR_PASSWORD = 2
-    LOGIN_BAD_EMAIL = 3
-    LOGIN_BAD_PASSWORD = 4
-    LOGIN_SNS_ACCOUNT = 5
-
     VODLIST_TYPE_ALL = 0
     VODLIST_TYPE_CODE_S = 32
     VODLIST_TYPE_CODE_A = 16
@@ -77,7 +71,7 @@ class GOMtv(object):
 
 
     def login(self, username, password, auth_type=AUTH_GOMTV):
-        self.cookie_jar.clear_session_cookies()
+        self.cookie_jar.clear()
         if auth_type == self.AUTH_GOMTV:
             form = {
                     "mb_username": username,
@@ -86,8 +80,8 @@ class GOMtv(object):
                     "rememberme": "1"
                     }
             ret = self._request("http://www.gomtv.net/user/loginProcess.gom", form, {'Referer': 'http://www.gomtv.net/'})
-            # FIXME
-            return self.LOGIN_SUCCESS
+            cookies = [cookie.name for cookie in self.cookie_jar if cookie.domain == '.gomtv.net']
+            return 'SES_userno' in cookies
         elif auth_type == self.AUTH_TWITTER:
             data = self._request("http://www.gomtv.net/twitter/redirect.gom?burl=/index.gom")
             location = re.search("document.location.replace\(\"(.*)\"\)", data).group(1)
@@ -109,18 +103,18 @@ class GOMtv(object):
 
             refresh = re.search('<meta http-equiv="refresh" content="0;url=(.*)">', data)
             if refresh is None:
-                return self.LOGIN_BAD_USERNAME_OR_PASSWORD
+                return False
             else:
                 location = refresh.group(1)
                 data = self._request(location)
-                return self.LOGIN_SUCCESS
+                return True
 
         elif auth_type == self.AUTH_FACEBOOK:
             data = self._request("http://www.gomtv.net/facebook/index.gom?burl=/index.gom")
             soup = BeautifulSoup(data)
             # already logged in
             if data.startswith("<script>"):
-                return self.LOGIN_SUCCESS
+                return False
 
             url = soup.find("form")["action"]
             payload = {}
@@ -132,9 +126,9 @@ class GOMtv(object):
 
             data = self._request(url, payload)
             if re.search("<title>Logga in", data) is None:
-                return self.LOGIN_SUCCESS
+                return True
             else:
-                return self.LOGIN_BAD_USERNAME_OR_PASSWORD
+                return False
 
     def get_league_list(self):
         soup = BeautifulSoup(self._request("http://www.gomtv.net/view/channelDetails.gom?gameid=0"))
@@ -188,6 +182,8 @@ class GOMtv(object):
         r = self._request(vod_url)
 
         flashvars = self._get_set_params(r)
+        if flashvars['uno'] == '0':
+            raise NotLoggedInException
         # 0 english, 1 korean
         jsondata = self.extract_jsonData(r)[0]
         soup = BeautifulSoup(r)

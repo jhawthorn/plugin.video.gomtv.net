@@ -20,7 +20,7 @@ def login():
     if not username or not password:
         addon.openSettings()
         return False
-    elif not g.login(username, password, auth_type) == GOMtv.LOGIN_SUCCESS:
+    elif not g.login(username, password, auth_type):
         xbmcgui.Dialog().ok("Login failed", "login failed")
         return False
     else:
