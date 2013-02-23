@@ -41,7 +41,7 @@ def build_listItem(name):
 
 def playVod(**params):
     g = gomtv()
-    url = g.get_vod_set_url(params, get_quality())
+    url = g.get_vod_set_url(params)
     li = xbmcgui.ListItem(path=url)
     li.setProperty('mimetype', 'video/mp4')
     xbmcplugin.setResolvedUrl(handle=handle, succeeded=True, listitem=li)
@@ -79,9 +79,6 @@ def list_main(league=None):
     else:
         return False
 
-def get_quality():
-    return get_setting("quality")
-
 def list_leagues():
     g = gomtv()
     leagues = g.get_league_list()
@@ -102,7 +99,7 @@ def list_vods(order, page, league=None):
 
 def list_vod_set(url):
     g = gomtv()
-    for s in g.get_vod_set(url):
+    for s in g.get_vod_set(url, quality=get_setting("quality")):
         url = genCallback(playVod, **s["params"])
         addLink(s["title"], url, "")
     return True

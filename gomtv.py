@@ -1,4 +1,4 @@
-import urllib, urllib2, re, cookielib, os, tempfile, json, md5
+import urllib, urllib2, re, cookielib, os, tempfile, json, md5, time
 from BeautifulSoup import BeautifulSoup
 import proxy
 from gomutil import *
@@ -20,10 +20,15 @@ class GOMtv(object):
     AUTH_TWITTER = 2
     AUTH_FACEBOOK = 3
 
-    LEVELS = {
-            'EHQ': [65, 60, 6, 5],
-            'HQ': [60, 6, 5],
-            'SQ': [6, 5]
+    LEVEL = {
+            'EHQ': 65,
+            'HQ': 60,
+            'SQ': 6
+            }
+    OLDLEVEL = {
+            'EHQ': 50,
+            'HQ': 50,
+            'SQ': 5
             }
 
     def __init__(self, cookie_path=None, use_proxy=False):
@@ -62,7 +67,7 @@ class GOMtv(object):
         return self._request('http://www.gomtv.net/webPlayer/getIP.gom')
 
     def set_cookie(self, name, value):
-        exp = time() + 24 * 60 * 60
+        exp = time.time() + 24 * 60 * 60
         cookie = cookielib.Cookie(version=0, name=name, value=value, port=None, port_specified=False,
                                   domain='.gomtv.net', domain_specified=True, domain_initial_dot=True,
                                   path='/', path_specified=True, secure=False, expires=exp,
@@ -178,7 +183,10 @@ class GOMtv(object):
         jsondata = re.search('var\s+jsonData\s+=\s+eval\s+\(([^)]*)\)', body).group(1)
         return json.loads(jsondata)
 
-    def get_vod_set(self, vod_url, quality="HQ"):
+    def get_vod_set(self, vod_url, quality="EHQ"):
+        self.set_cookie('SES_VODLEVEL',    str(self.LEVEL[quality]))
+        self.set_cookie('SES_VODOLDLEVEL', str(self.OLDLEVEL[quality]))
+
         r = self._request(vod_url)
 
         flashvars = self._get_set_params(r)
@@ -218,12 +226,10 @@ class GOMtv(object):
             url = match.group(1).replace('&amp;', '&').replace(' ', '%20')
             return self._key_or_proxy(url, params)
 
-    def get_vod_set_url(self, params, quality="EHQ"):
+    def get_vod_set_url(self, params):
         params["uip"] = self._get_ip()
         params["adstate"] = "0"
-        for level in self.LEVELS[quality]:
-            params['level'] = str(level)
-            url = self._get_url(params)
-            if url:
-                return url
+        url = self._get_url(params)
+        if url:
+            return url
 
