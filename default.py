@@ -1,5 +1,5 @@
 import urllib, re, xbmcplugin, xbmcgui, os, xbmc, xbmcaddon
-from gomtv import GOMtv, NotLoggedInException
+from gomtv import GOMtv, VodSet, NotLoggedInException
 
 BASE_COOKIE_PATH = os.path.join(xbmc.translatePath( "special://profile/" ), "addon_data", "plugin.video.gomtv.net", 'cookie.txt')
 handle = int(sys.argv[1])
@@ -41,10 +41,14 @@ def build_listItem(name):
 
 def playVod(**params):
     g = gomtv()
-    url = g.get_vod_set_url(params)
-    li = xbmcgui.ListItem(path=url)
-    li.setProperty('mimetype', 'video/mp4')
-    xbmcplugin.setResolvedUrl(handle=handle, succeeded=True, listitem=li)
+    vod_set = VodSet(params)
+    url = vod_set.get_url()
+    if url:
+        li = xbmcgui.ListItem(path=url)
+        li.setProperty('mimetype', 'video/mp4')
+        xbmcplugin.setResolvedUrl(handle=handle, succeeded=True, listitem=li)
+    else:
+        xbmcgui.Dialog().ok("VOD error", vod_set.get_error())
 
 def addLink(name, url, iconimage):
     xbmc.log("adding link: %s -> %s" % (name, url), xbmc.LOGDEBUG)

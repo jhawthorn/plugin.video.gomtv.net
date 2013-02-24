@@ -33,6 +33,12 @@ class VodSet(object):
         hashstr = "".join([self.params[key] for key in keys])
         self.params['goxkey'] = md5.new(hashstr).hexdigest()
 
+    def get_error(self):
+        if re.search('purchase_btn', self.xml):
+            return "Available for ticket holders only."
+        else:
+            return "Unknown error"
+
     def _get_href(self):
         match = re.search('<REF\s+href="(.+)"\s+reftype="vod"', self.xml)
         if match:
