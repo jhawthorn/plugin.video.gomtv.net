@@ -82,8 +82,7 @@ class GOMtv(object):
             'SQ': 5
             }
 
-    def __init__(self, cookie_path=None, use_proxy=False):
-        self.use_proxy = use_proxy
+    def __init__(self, cookie_path=None):
         self.vod_sets = {}
         if cookie_path is None:
             cookie_path = "%s%scookies_gomtv.txt" % (tempfile.gettempdir(), os.path.sep)
@@ -243,12 +242,4 @@ class GOMtv(object):
             params = dict(flashvars, **jsondata[i])
             yield {"params": params,
                     "title": "%i - %s" % (i+1, s['title'])}
-
-
-    def get_vod_set_url(self, params):
-        vod_set = VodSet(params)
-        if self.use_proxy:
-            return vod_set.get_proxy_url()
-        else:
-            return vod_set.get_url()
 

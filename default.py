@@ -9,8 +9,7 @@ def get_setting(setting_id):
     return xbmcplugin.getSetting(handle, setting_id)
 
 def gomtv():
-  use_proxy = (get_setting("seek_workaround") == "true")
-  return GOMtv(BASE_COOKIE_PATH,use_proxy=use_proxy)
+  return GOMtv(BASE_COOKIE_PATH)
 
 def login():
     g = gomtv()
