@@ -42,7 +42,10 @@ def build_listItem(name):
 def playVod(**params):
     g = gomtv()
     vod_set = VodSet(params)
-    url = vod_set.get_url()
+    if get_setting("seek_workaround") == "true":
+        url = vod_set.get_proxy_url()
+    else:
+        url = vod_set.get_url()
     if url:
         li = xbmcgui.ListItem(path=url)
         li.setProperty('mimetype', 'video/mp4')
