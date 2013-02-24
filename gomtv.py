@@ -55,7 +55,7 @@ class VodSet(object):
 
     def get_proxy_url(self):
         href, remote_ip, payload = self._get_href()
-        return proxy.url(href, payload)
+        return href and proxy.url(href, payload)
 
 class GOMtv(object):
     VODLIST_ORDER_MOST_RECENT = 1
