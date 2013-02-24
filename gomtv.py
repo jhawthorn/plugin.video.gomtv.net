@@ -6,6 +6,51 @@ from gomutil import *
 class NotLoggedInException(Exception):
     pass
 
+def request(url, params=None, headers={}, opener=None):
+    data = params and urllib.urlencode(params)
+    req = urllib2.Request(url, data, headers)
+    if opener:
+        response = opener.open(req)
+    else:
+        response = urllib2.urlopen(req)
+    r = response.read()
+    response.close()
+    return r
+
+class VodSet(object):
+    def __init__(self, params):
+        self.params = params
+        self._fix_params()
+
+        self.xml = request('http://gox.gomtv.net/cgi-bin/gox_vod_sfile.cgi', self.params)
+
+    def _fix_params(self):
+        if 'uip' not in self.params:
+            self.params["uip"] = request('http://www.gomtv.net/webPlayer/getIP.gom')
+        self.params["adstate"] = "0"
+        self.params["goxkey"] = "qoaEl"
+        keys = ["leagueid", "conid", "goxkey", "level", "uno", "uip", "adstate", "vjoinid", "nid"]
+        hashstr = "".join([self.params[key] for key in keys])
+        self.params['goxkey'] = md5.new(hashstr).hexdigest()
+
+    def _get_href(self):
+        match = re.search('<REF\s+href="(.+)"\s+reftype="vod"', self.xml)
+        if match:
+            href = match.group(1).replace('&amp;', '&').replace(' ', '%20')
+            remote_ip = re.search("//([0-9.]+)/", href).group(1)
+            payload = gom_key_payload(remote_ip, self.params)
+            return (href, remote_ip, payload)
+        else:
+            return (None, None, None)
+
+    def get_url(self):
+        href, remote_ip, payload = self._get_href()
+        return href and "%s&key=%s" % (href, gom_stream_key(remote_ip, payload))
+
+    def get_proxy_url(self):
+        href, remote_ip, payload = self._get_href()
+        return proxy.url(href, payload)
+
 class GOMtv(object):
     VODLIST_ORDER_MOST_RECENT = 1
     VODLIST_ORDER_MOST_VIEWED = 2
@@ -52,19 +97,9 @@ class GOMtv(object):
             if cookie.name.startswith("SES_"):
                 cookie.name = cookie.name.upper()
 
-        if data is not None:
-            data = urllib.urlencode(data)
-        req = urllib2.Request(url, data, headers)
-        response = self.opener.open(req)
-        ret = response.read()
-        response.close()
+        r = request(url, data, headers, opener=self.opener)
         self.cookie_jar.save(None,True)
-        #print "url: %s" % url
-        #print "response:\n%s" % ret
-        return ret
-
-    def _get_ip(self):
-        return self._request('http://www.gomtv.net/webPlayer/getIP.gom')
+        return r
 
     def set_cookie(self, name, value):
         exp = time.time() + 24 * 60 * 60
@@ -203,33 +238,11 @@ class GOMtv(object):
             yield {"params": params,
                     "title": "%i - %s" % (i+1, s['title'])}
 
-    def _key_or_proxy(self, url, params):
-        remote_ip = re.search("//([0-9.]+)/", url).group(1)
-        payload = gom_key_payload(remote_ip, params)
-        if self.use_proxy:
-            return proxy.url(url, payload)
-        else:
-            return "%s&key=%s" % (url, gom_stream_key(remote_ip, payload))
-
-    def _gox_params(self, params):
-        params["goxkey"] = "qoaEl"
-        keys = ["leagueid", "conid", "goxkey", "level", "uno", "uip", "adstate", "vjoinid", "nid"]
-        hashstr = "".join([params[key] for key in keys])
-        params['goxkey'] = md5.new(hashstr).hexdigest()
-        return params
-
-    def _get_url(self, params):
-        params = self._gox_params(params)
-        r = self._request('http://gox.gomtv.net/cgi-bin/gox_vod_sfile.cgi', params)
-        match = re.search('<REF\s+href="(.+)"\s+reftype="vod"', r)
-        if match:
-            url = match.group(1).replace('&amp;', '&').replace(' ', '%20')
-            return self._key_or_proxy(url, params)
 
     def get_vod_set_url(self, params):
-        params["uip"] = self._get_ip()
-        params["adstate"] = "0"
-        url = self._get_url(params)
-        if url:
-            return url
+        vod_set = VodSet(params)
+        if self.use_proxy:
+            return vod_set.get_proxy_url()
+        else:
+            return vod_set.get_url()
 
