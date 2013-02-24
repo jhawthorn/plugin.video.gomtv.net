@@ -76,6 +76,10 @@ class gom_proxy(asynchat.async_chat):
 
         self.push(request.http_format())
 
+    def readable(self):
+        # only read when we've filled the output buffer
+        return len(self.sink.producer_fifo) == 0
+
     def collect_incoming_data(self, data):
         self.sink.push(data)
 
@@ -107,7 +111,13 @@ class http_request_handler(asynchat.async_chat):
         headers = "".join(self.ibuffer) + "\r\n\r\n"
         request = HTTPRequest.parse(headers)
         translate_request(request)
-        gom_proxy(self, request)
+        self.proxy = gom_proxy(self, request)
+
+    def handle_close(self):
+        self.discard_buffers()
+        self.proxy.discard_buffers()
+        self.proxy.close()
+        self.close()
 
 class ProxyServer(asyncore.dispatcher):
     def __init__(self):
