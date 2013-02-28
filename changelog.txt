@@ -1,6 +1,7 @@
 
 [B]0.0.9[/B]
-Removed: Live stream
+Removed: Live stream support
+Fixed: Some issues with proxy
 
 [B]0.0.8[/B]
 Fixed: Fixes for GOMtv 2013 changes.
