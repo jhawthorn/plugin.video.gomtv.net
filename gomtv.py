@@ -95,6 +95,8 @@ class GOMtv(object):
         self.opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(self.cookie_jar))
 
     def _request(self, url, data=None, headers={}):
+        r = request(url, data, headers, opener=self.opener)
+
         # Ugly hack required to fix cookie names.
         # Guessing there's some javascript somewhere on that mess of a website
         # that uppercases the cookies..?
@@ -102,7 +104,6 @@ class GOMtv(object):
             if cookie.name.startswith("SES_"):
                 cookie.name = cookie.name.upper()
 
-        r = request(url, data, headers, opener=self.opener)
         self.cookie_jar.save(None,True)
         return r
 
@@ -124,9 +125,9 @@ class GOMtv(object):
                     "cmd": "login",
                     "rememberme": "1"
                     }
-            ret = self._request("http://www.gomtv.net/user/loginProcess.gom", form, {'Referer': 'http://www.gomtv.net/'})
+            ret = self._request("https://ssl.gomtv.net/userinfo/loginProcess.gom", form, {'Referer': 'http://www.gomtv.net/'})
             cookies = [cookie.name for cookie in self.cookie_jar if cookie.domain == '.gomtv.net']
-            return 'SES_userno' in cookies
+            return 'SES_MEMBERNO' in cookies
         elif auth_type == self.AUTH_TWITTER:
             data = self._request("http://www.gomtv.net/twitter/redirect.gom?burl=/index.gom")
             location = re.search("document.location.replace\(\"(.*)\"\)", data).group(1)
