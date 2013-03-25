@@ -1,4 +1,7 @@
 
+[B]0.0.10[/B]
+Fixed: Fix login, use SSL
+
 [B]0.0.9[/B]
 Removed: Live stream support
 Fixed: Some issues with proxy
